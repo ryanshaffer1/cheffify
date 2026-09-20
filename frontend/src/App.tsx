@@ -111,6 +111,7 @@ function App() {
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
   const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
 
   const normalizeRecipe = (item: any): Recipe => ({
     id: Number(item.id),
@@ -164,6 +165,29 @@ function App() {
       window.removeEventListener('offline', handleConnectionChange)
     }
   }, [])
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
+  }, [])
+
+  const installApp = async () => {
+    if (!installPrompt) {
+      return
+    }
+
+    ;(installPrompt as any).prompt()
+    await (installPrompt as any).userChoice
+    setInstallPrompt(null)
+  }
 
   const loadRecipes = async () => {
     const localRecipes = readStorage<Recipe[]>(STORAGE_KEYS.recipes, initialRecipes)
@@ -497,9 +521,16 @@ function App() {
           <p className="eyebrow">Meal planning</p>
           <h1>Cheffify</h1>
         </div>
-        <span className={online ? 'status-pill online' : 'status-pill offline'}>
-          {online ? 'Online' : 'Offline'}
-        </span>
+        <div className="topbar-actions">
+          {installPrompt ? (
+            <button type="button" className="secondary-button install-button" onClick={() => void installApp()}>
+              Install
+            </button>
+          ) : null}
+          <span className={online ? 'status-pill online' : 'status-pill offline'}>
+            {online ? 'Online' : 'Offline'}
+          </span>
+        </div>
       </header>
 
       {activeTab === 'recipes' && (

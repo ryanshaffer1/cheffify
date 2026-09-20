@@ -19,6 +19,12 @@
   z-index: 10;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0;
   color: #7a6a61;
@@ -155,6 +161,11 @@
 .secondary-button {
   background: #f7e7df;
   color: #b75b42;
+}
+
+.install-button {
+  padding: 8px 12px;
+  font-size: 0.78rem;
 }
 
 .danger-button {
