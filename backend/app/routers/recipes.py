@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -13,6 +16,8 @@ from app.models import (
 from app.schemas import RecipeCreate, RecipeRead
 
 router = APIRouter()
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "recipes"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_db():
@@ -21,6 +26,27 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@router.post("/upload-image")
+def upload_recipe_image(file: UploadFile = File(...)) -> dict[str, str]:
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided"
+        )
+
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported image type"
+        )
+
+    filename = f"{uuid.uuid4().hex}{suffix}"
+    destination = UPLOAD_DIR / filename
+    contents = file.file.read()
+    destination.write_bytes(contents)
+
+    return {"image_url": f"/uploads/recipes/{filename}"}
 
 
 @router.get("", response_model=list[RecipeRead])

@@ -21,13 +21,24 @@ type RecipeIngredient = {
   notes?: string | null
 }
 
+type RecipeInstruction = {
+  step_number: number
+  instruction: string
+}
+
 type Recipe = {
   id: number
   title: string
   description: string
   servings: number
+  defaultServings: number
+  servingsMin: number | null
+  servingsMax: number | null
+  imageUrl?: string | null
   keywords: string[]
   ingredients: RecipeIngredient[]
+  instructions: RecipeInstruction[]
+  tools: string[]
   nutrition?: RecipeNutrition | null
 }
 
@@ -40,6 +51,7 @@ type GroceryItem = {
 }
 
 const API_BASE = '/api'
+const BACKEND_BASE_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/+$/, '')
 const STORAGE_KEYS = {
   recipes: 'cheffify.recipes',
   mealPlan: 'cheffify.mealPlan',
@@ -131,6 +143,22 @@ const normalizeIngredientUnit = (unit: string): string => {
 
 const normalizeDisplayName = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase()
 
+const resolveImageUrl = (imageUrl?: string | null): string | null => {
+  if (!imageUrl) {
+    return null
+  }
+
+  if (/^https?:\/\//i.test(imageUrl)) {
+    return imageUrl
+  }
+
+  if (imageUrl.startsWith('/')) {
+    return `${BACKEND_BASE_URL}${imageUrl}`
+  }
+
+  return `${BACKEND_BASE_URL}/${imageUrl}`
+}
+
 const toTitleCase = (value: string): string =>
   value
     .trim()
@@ -218,6 +246,37 @@ const formatIngredient = (ingredient: RecipeIngredient | null | undefined): stri
   return base.trim()
 }
 
+const getRecipeDefaultServings = (recipe: Pick<Recipe, 'servings' | 'defaultServings'>): number => {
+  return Number(recipe.defaultServings || recipe.servings || 1) || 1
+}
+
+const getRecipeServingRangeText = (
+  recipe: Pick<Recipe, 'servings' | 'defaultServings' | 'servingsMin' | 'servingsMax'>
+): string => {
+  const defaultServings = getRecipeDefaultServings(recipe)
+  const minServings = Number(recipe.servingsMin ?? defaultServings)
+  const maxServings = Number(recipe.servingsMax ?? defaultServings)
+
+  if (minServings > 1 || maxServings > defaultServings) {
+    return `Serves ${minServings}-${maxServings}`
+  }
+
+  return `Serves ${defaultServings}`
+}
+
+const formatNutritionValue = (value: number | null | undefined, servings: number): string => {
+  if (value == null || !Number.isFinite(value)) {
+    return '—'
+  }
+
+  const perServingValue = servings > 0 ? value / servings : value
+  if (Number.isInteger(perServingValue)) {
+    return String(perServingValue)
+  }
+
+  return perServingValue.toFixed(1)
+}
+
 const formatGroceryItemText = (item: GroceryItem | { name: string; checked: boolean; source?: string[]; quantity?: number; unit?: string | null }) => {
   const name = toTitleCase(item.name)
   const quantity = Number(item.quantity ?? 0)
@@ -235,6 +294,8 @@ const formatGroceryItemText = (item: GroceryItem | { name: string; checked: bool
 }
 
 const createIngredientRow = () => ({ name: '', quantity: '1', unit: '' })
+const createInstructionStep = () => ''
+const createCookwareRow = () => ''
 
 const getGroceryKey = (item: Pick<GroceryItem, 'name' | 'unit'>): string => {
   const normalizedName = normalizeDisplayName(item.name)
@@ -288,11 +349,20 @@ const initialRecipes: Recipe[] = [
     title: 'Sheet Pan Chicken & Veggies',
     description: 'Simple family dinner',
     servings: 2,
+    defaultServings: 2,
+    servingsMin: 1,
+    servingsMax: 4,
     keywords: ['quick', 'dinner'],
     ingredients: [
       makeIngredient('Chicken breast', 2, 'pieces'),
       makeIngredient('Broccoli', 2, 'cups'),
       makeIngredient('Tomatoes', 1, 'cup'),
+    ],
+    tools: ['Sheet pan', 'Spatula'],
+    instructions: [
+      { step_number: 1, instruction: 'Preheat the oven and arrange the chicken and vegetables on a sheet pan.' },
+      { step_number: 2, instruction: 'Roast until the chicken is cooked through and the vegetables are tender.' },
+      { step_number: 3, instruction: 'Season with herbs and serve hot.' },
     ],
   },
   {
@@ -300,11 +370,20 @@ const initialRecipes: Recipe[] = [
     title: 'Lemon Herb Pasta',
     description: 'Fast vegetarian bowl',
     servings: 2,
+    defaultServings: 2,
+    servingsMin: 1,
+    servingsMax: 4,
     keywords: ['vegetarian', 'quick'],
     ingredients: [
       makeIngredient('Pasta', 8, 'oz'),
       makeIngredient('Lemon', 1, 'whole'),
       makeIngredient('Parsley', 1, 'cup'),
+    ],
+    tools: ['Pot', 'Colander'],
+    instructions: [
+      { step_number: 1, instruction: 'Cook the pasta until al dente, then drain and reserve a little pasta water.' },
+      { step_number: 2, instruction: 'Toss the pasta with lemon juice, parsley, and a splash of reserved water.' },
+      { step_number: 3, instruction: 'Serve with extra herbs and a pinch of salt and pepper.' },
     ],
   },
   {
@@ -312,11 +391,20 @@ const initialRecipes: Recipe[] = [
     title: 'Greek Salad Bowls',
     description: 'Healthy lunch option',
     servings: 2,
+    defaultServings: 2,
+    servingsMin: 1,
+    servingsMax: 4,
     keywords: ['lunch', 'vegetarian'],
     ingredients: [
       makeIngredient('Tomatoes', 2, 'cups'),
       makeIngredient('Cucumber', 1, 'whole'),
       makeIngredient('Feta', 4, 'oz'),
+    ],
+    tools: ['Knife', 'Mixing bowl'],
+    instructions: [
+      { step_number: 1, instruction: 'Chop the tomatoes and cucumber into bite-size pieces.' },
+      { step_number: 2, instruction: 'Add feta and toss gently with your preferred dressing.' },
+      { step_number: 3, instruction: 'Serve immediately as a fresh lunch bowl.' },
     ],
   },
 ]
@@ -364,9 +452,18 @@ function App() {
   const [uploadIngredientRows, setUploadIngredientRows] = useState<Array<{ name: string; quantity: string; unit: string }>>([
     createIngredientRow(),
   ])
+  const [uploadInstructionRows, setUploadInstructionRows] = useState<string[]>([createInstructionStep()])
+  const [uploadCookwareRows, setUploadCookwareRows] = useState<string[]>([createCookwareRow()])
+  const [uploadImageUrl, setUploadImageUrl] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [expandedUploadInstructionIndex, setExpandedUploadInstructionIndex] = useState<number | null>(null)
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
   const [editIngredientRows, setEditIngredientRows] = useState<Array<{ name: string; quantity: string; unit: string }>>([
     createIngredientRow(),
   ])
+  const [editInstructionRows, setEditInstructionRows] = useState<string[]>([createInstructionStep()])
+  const [editCookwareRows, setEditCookwareRows] = useState<string[]>([createCookwareRow()])
+  const [expandedEditInstructionIndex, setExpandedEditInstructionIndex] = useState<number | null>(null)
 
   const updateIngredientRow = (
     setter: React.Dispatch<React.SetStateAction<Array<{ name: string; quantity: string; unit: string }>>>,
@@ -397,33 +494,97 @@ function App() {
     })
   }
 
-  const normalizeRecipe = (item: any): Recipe => ({
-    id: Number(item.id),
-    title: item.title || 'Untitled recipe',
-    description: item.description || 'Custom recipe',
-    servings: Number(item.default_servings || item.servings || 2),
-    keywords: Array.isArray(item.keywords) ? item.keywords : [],
-    ingredients: Array.isArray(item.ingredients)
-      ? item.ingredients.map((ingredient: any) => ({
-          display_name: ingredient.display_name || ingredient.normalized_name || 'Ingredient',
-          normalized_name: ingredient.normalized_name || ingredient.display_name || 'ingredient',
-          quantity: Number(ingredient.quantity ?? 1),
-          unit: ingredient.unit || 'item',
-          notes: ingredient.notes ?? null,
-          is_optional: Boolean(ingredient.is_optional),
-        }))
-      : [],
-    nutrition: item.nutrition
-      ? {
-          calories: item.nutrition.calories == null ? null : Number(item.nutrition.calories),
-          protein_g: item.nutrition.protein_g == null ? null : Number(item.nutrition.protein_g),
-          carbs_g: item.nutrition.carbs_g == null ? null : Number(item.nutrition.carbs_g),
-          fat_g: item.nutrition.fat_g == null ? null : Number(item.nutrition.fat_g),
-          fiber_g: item.nutrition.fiber_g == null ? null : Number(item.nutrition.fiber_g),
-          notes: item.nutrition.notes ?? null,
-        }
-      : null,
-  })
+  const addInstructionStep = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter((current) => [...current, createInstructionStep()])
+  }
+
+  const removeInstructionStep = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+    setter((current) => {
+      if (current.length === 1) {
+        return [createInstructionStep()]
+      }
+      return current.filter((_, rowIndex) => rowIndex !== index)
+    })
+  }
+
+  const addCookwareRow = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter((current) => [...current, createCookwareRow()])
+  }
+
+  const removeCookwareRow = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+    setter((current) => {
+      if (current.length === 1) {
+        return [createCookwareRow()]
+      }
+      return current.filter((_, rowIndex) => rowIndex !== index)
+    })
+  }
+
+  const moveInstructionStep = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    index: number,
+    direction: -1 | 1
+  ) => {
+    setter((current) => {
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= current.length) {
+        return current
+      }
+
+      const next = [...current]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+  }
+
+  const normalizeRecipe = (item: any): Recipe => {
+    const defaultServings = Number(item.default_servings ?? item.servings ?? 2) || 2
+    const servingsMin = item.servings_min == null ? null : Number(item.servings_min) || 1
+    const servingsMax = item.servings_max == null ? null : Number(item.servings_max) || defaultServings
+
+    return {
+      id: Number(item.id),
+      title: item.title || 'Untitled recipe',
+      description: item.description || 'Custom recipe',
+      servings: defaultServings,
+      defaultServings,
+      servingsMin,
+      servingsMax,
+      imageUrl: item.image_url ?? item.imageUrl ?? null,
+      keywords: Array.isArray(item.keywords) ? item.keywords : [],
+      ingredients: Array.isArray(item.ingredients)
+        ? item.ingredients.map((ingredient: any) => ({
+            display_name: ingredient.display_name || ingredient.normalized_name || 'Ingredient',
+            normalized_name: ingredient.normalized_name || ingredient.display_name || 'ingredient',
+            quantity: Number(ingredient.quantity ?? 1),
+            unit: ingredient.unit || 'item',
+            notes: ingredient.notes ?? null,
+            is_optional: Boolean(ingredient.is_optional),
+          }))
+        : [],
+      instructions: Array.isArray(item.instructions)
+        ? item.instructions
+            .map((instruction: any, index: number) => ({
+              step_number: Number(instruction.step_number ?? index + 1),
+              instruction: String(instruction.instruction ?? '').trim(),
+            }))
+            .filter((instruction: { instruction: string }) => instruction.instruction)
+        : [],
+      tools: Array.isArray(item.tools)
+        ? item.tools.map((tool: string) => String(tool).trim()).filter(Boolean)
+        : [],
+      nutrition: item.nutrition
+        ? {
+            calories: item.nutrition.calories == null ? null : Number(item.nutrition.calories),
+            protein_g: item.nutrition.protein_g == null ? null : Number(item.nutrition.protein_g),
+            carbs_g: item.nutrition.carbs_g == null ? null : Number(item.nutrition.carbs_g),
+            fat_g: item.nutrition.fat_g == null ? null : Number(item.nutrition.fat_g),
+            fiber_g: item.nutrition.fiber_g == null ? null : Number(item.nutrition.fiber_g),
+            notes: item.nutrition.notes ?? null,
+          }
+        : null,
+    }
+  }
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.recipes, JSON.stringify(recipes))
@@ -527,11 +688,44 @@ function App() {
 
   const isRecipeInMealPlan = (recipeId: number) => mealPlan.some((item) => item.id === recipeId)
 
+  const openRecipeDetails = (recipeId: number) => {
+    setSelectedRecipeId(recipeId)
+    setActiveTab('recipes')
+  }
+
   const toggleMealPlanRecipe = (recipe: Recipe) => {
+    const normalizedRecipe = {
+      ...recipe,
+      servings: getRecipeDefaultServings(recipe),
+      defaultServings: getRecipeDefaultServings(recipe),
+      servingsMin: recipe.servingsMin ?? 1,
+      servingsMax: recipe.servingsMax ?? getRecipeDefaultServings(recipe),
+    }
+
     setMealPlan((current) => {
       const alreadyAdded = current.some((item) => item.id === recipe.id)
-      return alreadyAdded ? current.filter((item) => item.id !== recipe.id) : [...current, recipe]
+      return alreadyAdded ? current.filter((item) => item.id !== recipe.id) : [...current, normalizedRecipe]
     })
+  }
+
+  const updateMealPlanServings = (recipeId: number, nextServings: number) => {
+    setMealPlan((current) =>
+      current.map((recipe) => {
+        if (recipe.id !== recipeId) {
+          return recipe
+        }
+
+        const baseServings = getRecipeDefaultServings(recipe)
+        const minServings = recipe.servingsMin ?? 1
+        const maxServings = recipe.servingsMax ?? baseServings
+        const boundedServings = Math.min(Math.max(nextServings || baseServings, minServings), maxServings)
+
+        return {
+          ...recipe,
+          servings: boundedServings,
+        }
+      })
+    )
   }
 
   const removeMealPlanItem = (index: number) => {
@@ -688,6 +882,42 @@ function App() {
     }
   }
 
+  const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>, mode: 'upload' | 'edit') => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      setUploadingImage(true)
+      const response = await fetch(`${API_BASE}/recipes/upload-image`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Image upload failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      const nextUrl = typeof data.image_url === 'string' ? data.image_url : null
+
+      if (mode === 'upload') {
+        setUploadImageUrl(nextUrl)
+      } else {
+        setEditImageUrl(nextUrl)
+      }
+    } catch {
+      // Ignore upload errors for now and keep the local form editable.
+    } finally {
+      setUploadingImage(false)
+      event.target.value = ''
+    }
+  }
+
   const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
@@ -704,12 +934,24 @@ function App() {
         const normalizedUnit = normalizeIngredientUnit(row.unit)
         return makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit)
       })
+    const parsedInstructions = uploadInstructionRows
+      .map((step) => step.trim())
+      .filter(Boolean)
+      .map((instruction, index) => ({
+        step_number: index + 1,
+        instruction,
+      }))
+    const parsedTools = uploadCookwareRows.map((tool) => tool.trim()).filter(Boolean)
 
     if (!title || parsedIngredients.length === 0) {
       return
     }
 
     const defaultServings = Number(formData.get('defaultServings')) || 2
+    const minServings = Number(formData.get('minServings')) || 1
+    const maxServings = Number(formData.get('maxServings')) || defaultServings
+    const normalizedMinServings = Math.max(1, minServings)
+    const normalizedMaxServings = Math.max(defaultServings, maxServings)
     const nutrition = {
       calories: Number(formData.get('calories')) || null,
       protein_g: Number(formData.get('protein')) || null,
@@ -723,8 +965,14 @@ function App() {
       title,
       description: 'Custom recipe',
       servings: defaultServings,
+      defaultServings,
+      servingsMin: normalizedMinServings,
+      servingsMax: normalizedMaxServings,
+      imageUrl: uploadImageUrl,
       keywords: keywords.length ? keywords : ['custom'],
       ingredients: parsedIngredients,
+      instructions: parsedInstructions,
+      tools: parsedTools,
       nutrition,
     }
 
@@ -732,12 +980,12 @@ function App() {
       title,
       description: 'Custom recipe',
       default_servings: defaultServings,
-      servings_min: 1,
-      servings_max: defaultServings,
-      image_url: null,
+      servings_min: normalizedMinServings,
+      servings_max: normalizedMaxServings,
+      image_url: uploadImageUrl,
       source_type: 'custom',
       keywords: localRecipe.keywords,
-      tools: [],
+      tools: parsedTools,
       ingredients: parsedIngredients.map((ingredient) => ({
         display_name: ingredient.display_name,
         normalized_name: ingredient.normalized_name,
@@ -746,12 +994,15 @@ function App() {
         is_optional: ingredient.is_optional ?? false,
         notes: ingredient.notes ?? null,
       })),
-      instructions: [],
+      instructions: parsedInstructions,
       nutrition: Object.values(nutrition).every((value) => value === null || value === '') ? null : nutrition,
     }
 
     setRecipes((current) => [localRecipe, ...current])
     setUploadIngredientRows([createIngredientRow()])
+    setUploadInstructionRows([createInstructionStep()])
+    setUploadCookwareRows([createCookwareRow()])
+    setUploadImageUrl(null)
     setActiveTab('recipes')
     event.currentTarget.reset()
 
@@ -791,6 +1042,17 @@ function App() {
             }))
           : [createIngredientRow()]
       )
+      setEditInstructionRows(
+        selectedRecipe.instructions.length
+          ? selectedRecipe.instructions.map((instruction) => instruction.instruction)
+          : [createInstructionStep()]
+      )
+      setEditCookwareRows(
+        selectedRecipe.tools.length ? selectedRecipe.tools : [createCookwareRow()]
+      )
+      setEditImageUrl(selectedRecipe.imageUrl ?? null)
+    } else {
+      setEditImageUrl(null)
     }
   }, [selectedRecipe])
 
@@ -805,7 +1067,11 @@ function App() {
 
     const title = String(formData.get('title') || '').trim()
     const description = String(formData.get('description') || '').trim() || 'Custom recipe'
-    const servings = Number(formData.get('servings')) || 2
+    const defaultServings = Number(formData.get('defaultServings')) || 2
+    const minServings = Number(formData.get('minServings')) || 1
+    const maxServings = Number(formData.get('maxServings')) || defaultServings
+    const normalizedMinServings = Math.max(1, minServings)
+    const normalizedMaxServings = Math.max(defaultServings, maxServings)
     const keywords = String(formData.get('keywords') || '')
       .split(',')
       .map((value) => value.trim())
@@ -818,6 +1084,14 @@ function App() {
         const normalizedUnit = normalizeIngredientUnit(row.unit)
         return makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit)
       })
+    const instructionSteps = editInstructionRows
+      .map((step) => step.trim())
+      .filter(Boolean)
+      .map((instruction, index) => ({
+        step_number: index + 1,
+        instruction,
+      }))
+    const cookware = editCookwareRows.map((tool) => tool.trim()).filter(Boolean)
 
     if (!title || ingredients.length === 0) {
       return
@@ -832,13 +1106,21 @@ function App() {
       notes: String(formData.get('nutritionNotes') || '').trim() || null,
     }
 
+    const nextImageUrl = editImageUrl ?? selectedRecipe?.imageUrl ?? null
+
     const patch: Recipe = {
       id,
       title,
       description,
-      servings,
+      servings: defaultServings,
+      defaultServings,
+      servingsMin: normalizedMinServings,
+      servingsMax: normalizedMaxServings,
+      imageUrl: nextImageUrl,
       keywords: keywords.length ? keywords : ['custom'],
       ingredients,
+      instructions: instructionSteps,
+      tools: cookware,
       nutrition,
     }
 
@@ -853,13 +1135,13 @@ function App() {
     const payload = {
       title,
       description,
-      default_servings: servings,
-      servings_min: 1,
-      servings_max: servings,
-      image_url: null,
+      default_servings: defaultServings,
+      servings_min: normalizedMinServings,
+      servings_max: normalizedMaxServings,
+      image_url: nextImageUrl,
       source_type: 'custom',
       keywords: patch.keywords,
-      tools: [],
+      tools: cookware,
       ingredients: ingredients.map((ingredient) => ({
         display_name: ingredient.display_name,
         normalized_name: ingredient.normalized_name,
@@ -868,7 +1150,7 @@ function App() {
         is_optional: ingredient.is_optional ?? false,
         notes: ingredient.notes ?? null,
       })),
-      instructions: [],
+      instructions: instructionSteps,
       nutrition: Object.values(nutrition).every((value) => value === null || value === '') ? null : nutrition,
     }
 
@@ -955,7 +1237,11 @@ function App() {
               </div>
 
               <div className="recipe-detail-header">
-                <div className="recipe-thumb detail-thumb" aria-hidden="true" />
+                <div
+                  className={selectedRecipe.imageUrl ? 'recipe-thumb detail-thumb has-image' : 'recipe-thumb detail-thumb'}
+                  aria-hidden="true"
+                  style={selectedRecipe.imageUrl ? { backgroundImage: `url(${resolveImageUrl(selectedRecipe.imageUrl)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                />
                 <div>
                   <h2>{selectedRecipe.title}</h2>
                   <p>{selectedRecipe.description}</p>
@@ -963,7 +1249,7 @@ function App() {
               </div>
 
               <div className="meta-row">
-                <span>Serves {selectedRecipe.servings}</span>
+                <span>{getRecipeServingRangeText(selectedRecipe)}</span>
                 <span>{selectedRecipe.keywords.join(', ') || 'custom'}</span>
               </div>
 
@@ -978,17 +1264,41 @@ function App() {
                 </ul>
               </div>
 
+              {selectedRecipe.tools.length > 0 && (
+                <div className="detail-section">
+                  <h3>Cookware</h3>
+                  <ul>
+                    {selectedRecipe.tools.map((tool, index) => (
+                      <li key={`${selectedRecipe.id}-tool-${tool}-${index}`}>{tool}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {selectedRecipe.nutrition && (
                 <div className="detail-section">
-                  <h3>Nutrition</h3>
+                  <h3>Nutrition per Serving</h3>
                   <div className="nutrition-grid">
-                    <span>Calories: {selectedRecipe.nutrition.calories ?? '—'}</span>
-                    <span>Protein: {selectedRecipe.nutrition.protein_g ?? '—'}g</span>
-                    <span>Carbs: {selectedRecipe.nutrition.carbs_g ?? '—'}g</span>
-                    <span>Fat: {selectedRecipe.nutrition.fat_g ?? '—'}g</span>
-                    <span>Fiber: {selectedRecipe.nutrition.fiber_g ?? '—'}g</span>
+                    <span>Calories: {formatNutritionValue(selectedRecipe.nutrition.calories, getRecipeDefaultServings(selectedRecipe))}</span>
+                    <span>Protein: {formatNutritionValue(selectedRecipe.nutrition.protein_g, getRecipeDefaultServings(selectedRecipe))}g</span>
+                    <span>Carbs: {formatNutritionValue(selectedRecipe.nutrition.carbs_g, getRecipeDefaultServings(selectedRecipe))}g</span>
+                    <span>Fat: {formatNutritionValue(selectedRecipe.nutrition.fat_g, getRecipeDefaultServings(selectedRecipe))}g</span>
+                    <span>Fiber: {formatNutritionValue(selectedRecipe.nutrition.fiber_g, getRecipeDefaultServings(selectedRecipe))}g</span>
                   </div>
                   {selectedRecipe.nutrition.notes ? <p className="nutrition-note">{selectedRecipe.nutrition.notes}</p> : null}
+                </div>
+              )}
+
+              {selectedRecipe.instructions.length > 0 && (
+                <div className="detail-section">
+                  <h3>Instructions</h3>
+                  <ol className="instruction-list">
+                    {selectedRecipe.instructions.map((instruction) => (
+                      <li key={`${selectedRecipe.id}-instruction-${instruction.step_number}`}>
+                        {instruction.instruction}
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
 
@@ -1022,12 +1332,36 @@ function App() {
                   Keywords
                   <input name="keywords" type="text" defaultValue={selectedRecipe.keywords.join(', ')} />
                 </label>
-                <label>
-                  Servings
-                  <input name="servings" type="number" min="1" defaultValue={selectedRecipe.servings} />
-                </label>
+                <div className="subsection-block">
+                  <h3>Image</h3>
+                  <label className="image-upload-field">
+                    <span>Upload recipe photo</span>
+                    <input type="file" accept="image/*" onChange={(event) => void handleImageFileChange(event, 'edit')} />
+                    {uploadingImage ? <small>Uploading…</small> : null}
+                    {(editImageUrl || selectedRecipe.imageUrl) ? (
+                      <img src={resolveImageUrl(editImageUrl ?? selectedRecipe.imageUrl) ?? undefined} alt="Recipe preview" className="recipe-preview" />
+                    ) : null}
+                  </label>
+                </div>
+                <div className="subsection-block">
+                  <h3>Servings</h3>
+                  <div className="servings-row">
+                    <label>
+                      Default
+                      <input name="defaultServings" type="number" min="1" defaultValue={selectedRecipe.defaultServings ?? selectedRecipe.servings} />
+                    </label>
+                    <label>
+                      Min
+                      <input name="minServings" type="number" min="1" defaultValue={selectedRecipe.servingsMin ?? 1} />
+                    </label>
+                    <label>
+                      Max
+                      <input name="maxServings" type="number" min="1" defaultValue={selectedRecipe.servingsMax ?? selectedRecipe.defaultServings ?? selectedRecipe.servings} />
+                    </label>
+                  </div>
+                </div>
                 <div className="ingredient-editor">
-                  <label>Ingredients</label>
+                  <label>Ingredients (based on default servings)</label>
                   {editIngredientRows.map((row, index) => (
                     <div key={`edit-ingredient-${index}`} className="ingredient-row">
                       <input
@@ -1063,27 +1397,105 @@ function App() {
                     Add Ingredient
                   </button>
                 </div>
-                <div className="nutrition-grid editor-grid">
-                  <label>
-                    Calories
-                    <input name="calories" type="number" min="0" defaultValue={selectedRecipe.nutrition?.calories ?? ''} />
-                  </label>
-                  <label>
-                    Protein (g)
-                    <input name="protein" type="number" min="0" defaultValue={selectedRecipe.nutrition?.protein_g ?? ''} />
-                  </label>
-                  <label>
-                    Carbs (g)
-                    <input name="carbs" type="number" min="0" defaultValue={selectedRecipe.nutrition?.carbs_g ?? ''} />
-                  </label>
-                  <label>
-                    Fat (g)
-                    <input name="fat" type="number" min="0" defaultValue={selectedRecipe.nutrition?.fat_g ?? ''} />
-                  </label>
-                  <label>
-                    Fiber (g)
-                    <input name="fiber" type="number" min="0" defaultValue={selectedRecipe.nutrition?.fiber_g ?? ''} />
-                  </label>
+                <div className="ingredient-editor">
+                  <label>Cookware</label>
+                  {editCookwareRows.map((tool, index) => (
+                    <div key={`edit-cookware-${index}`} className="ingredient-row instruction-row">
+                      <input
+                        type="text"
+                        className="ingredient-field ingredient-field--name"
+                        value={tool}
+                        placeholder="Cookware item"
+                        onChange={(event) => {
+                          const next = [...editCookwareRows]
+                          next[index] = event.target.value
+                          setEditCookwareRows(next)
+                        }}
+                      />
+                      {editCookwareRows.length > 1 ? (
+                        <button type="button" className="icon-button" aria-label="Remove cookware item" onClick={() => removeCookwareRow(setEditCookwareRows, index)}>
+                          X
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button type="button" className="secondary-button" onClick={() => addCookwareRow(setEditCookwareRows)}>
+                    Add Cookware
+                  </button>
+                </div>
+                <div className="ingredient-editor">
+                  <label>Cooking Instructions</label>
+                  {editInstructionRows.map((step, index) => (
+                    <div key={`edit-instruction-${index}`} className="ingredient-row instruction-row">
+                      <span className="instruction-step-number">{index + 1}.</span>
+                      <textarea
+                        className="ingredient-field ingredient-field--name instruction-text-area"
+                        value={step}
+                        placeholder="Add a cooking step"
+                        rows={expandedEditInstructionIndex === index ? 3 : 1}
+                        onFocus={() => setExpandedEditInstructionIndex(index)}
+                        onBlur={() => setExpandedEditInstructionIndex((current) => (current === index ? null : current))}
+                        onChange={(event) => {
+                          const next = [...editInstructionRows]
+                          next[index] = event.target.value
+                          setEditInstructionRows(next)
+                        }}
+                      />
+                      {editInstructionRows.length > 1 ? (
+                        <div className="instruction-actions">
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label="Move instruction up"
+                            disabled={index === 0}
+                            onClick={() => moveInstructionStep(setEditInstructionRows, index, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label="Move instruction down"
+                            disabled={index === editInstructionRows.length - 1}
+                            onClick={() => moveInstructionStep(setEditInstructionRows, index, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button type="button" className="icon-button" aria-label="Remove instruction step" onClick={() => removeInstructionStep(setEditInstructionRows, index)}>
+                            X
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button type="button" className="secondary-button" onClick={() => addInstructionStep(setEditInstructionRows)}>
+                    Add Step
+                  </button>
+                </div>
+                <div className="subsection-block">
+                  <h3>Nutrition (based on default servings)</h3>
+                  <div className="nutrition-grid editor-grid">
+                    <label>
+                      Calories
+                      <input name="calories" type="number" min="0" defaultValue={selectedRecipe.nutrition?.calories ?? ''} />
+                    </label>
+                    <label>
+                      Protein (g)
+                      <input name="protein" type="number" min="0" defaultValue={selectedRecipe.nutrition?.protein_g ?? ''} />
+                    </label>
+                    <label>
+                      Carbs (g)
+                      <input name="carbs" type="number" min="0" defaultValue={selectedRecipe.nutrition?.carbs_g ?? ''} />
+                    </label>
+                    <label>
+                      Fat (g)
+                      <input name="fat" type="number" min="0" defaultValue={selectedRecipe.nutrition?.fat_g ?? ''} />
+                    </label>
+                    <label>
+                      Fiber (g)
+                      <input name="fiber" type="number" min="0" defaultValue={selectedRecipe.nutrition?.fiber_g ?? ''} />
+                    </label>
+                  </div>
                 </div>
                 <label>
                   Nutrition notes
@@ -1112,10 +1524,32 @@ function App() {
                   Keywords
                   <input name="keywords" type="text" placeholder="quick, dinner, vegetarian" />
                 </label>
-                <label>
-                  Default servings
-                  <input name="defaultServings" type="number" min="1" defaultValue={2} />
-                </label>
+                <div className="subsection-block">
+                  <h3>Image</h3>
+                  <label className="image-upload-field">
+                    <span>Upload recipe photo</span>
+                    <input type="file" accept="image/*" onChange={(event) => void handleImageFileChange(event, 'upload')} />
+                    {uploadingImage ? <small>Uploading…</small> : null}
+                    {uploadImageUrl ? <img src={resolveImageUrl(uploadImageUrl) ?? undefined} alt="Recipe preview" className="recipe-preview" /> : null}
+                  </label>
+                </div>
+                <div className="subsection-block">
+                  <h3>Servings</h3>
+                  <div className="servings-row">
+                    <label>
+                      Default
+                      <input name="defaultServings" type="number" min="1" defaultValue={2} />
+                    </label>
+                    <label>
+                      Min
+                      <input name="minServings" type="number" min="1" defaultValue={1} />
+                    </label>
+                    <label>
+                      Max
+                      <input name="maxServings" type="number" min="1" defaultValue={4} />
+                    </label>
+                  </div>
+                </div>
                 <div className="ingredient-editor">
                   <label>Ingredients</label>
                   {uploadIngredientRows.map((row, index) => (
@@ -1153,27 +1587,105 @@ function App() {
                     Add Ingredient
                   </button>
                 </div>
-                <div className="nutrition-grid editor-grid">
-                  <label>
-                    Calories
-                    <input name="calories" type="number" min="0" placeholder="540" />
-                  </label>
-                  <label>
-                    Protein (g)
-                    <input name="protein" type="number" min="0" placeholder="42" />
-                  </label>
-                  <label>
-                    Carbs (g)
-                    <input name="carbs" type="number" min="0" placeholder="18" />
-                  </label>
-                  <label>
-                    Fat (g)
-                    <input name="fat" type="number" min="0" placeholder="25" />
-                  </label>
-                  <label>
-                    Fiber (g)
-                    <input name="fiber" type="number" min="0" placeholder="6" />
-                  </label>
+                <div className="ingredient-editor">
+                  <label>Cookware</label>
+                  {uploadCookwareRows.map((tool, index) => (
+                    <div key={`upload-cookware-${index}`} className="ingredient-row instruction-row">
+                      <input
+                        type="text"
+                        className="ingredient-field ingredient-field--name"
+                        value={tool}
+                        placeholder="Cookware item"
+                        onChange={(event) => {
+                          const next = [...uploadCookwareRows]
+                          next[index] = event.target.value
+                          setUploadCookwareRows(next)
+                        }}
+                      />
+                      {uploadCookwareRows.length > 1 ? (
+                        <button type="button" className="icon-button" aria-label="Remove cookware item" onClick={() => removeCookwareRow(setUploadCookwareRows, index)}>
+                          X
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button type="button" className="secondary-button" onClick={() => addCookwareRow(setUploadCookwareRows)}>
+                    Add Cookware
+                  </button>
+                </div>
+                <div className="ingredient-editor">
+                  <label>Cooking Instructions</label>
+                  {uploadInstructionRows.map((step, index) => (
+                    <div key={`upload-instruction-${index}`} className="ingredient-row instruction-row">
+                      <span className="instruction-step-number">{index + 1}.</span>
+                      <textarea
+                        className="ingredient-field ingredient-field--name instruction-text-area"
+                        value={step}
+                        placeholder="Add a cooking step"
+                        rows={expandedUploadInstructionIndex === index ? 3 : 1}
+                        onFocus={() => setExpandedUploadInstructionIndex(index)}
+                        onBlur={() => setExpandedUploadInstructionIndex((current) => (current === index ? null : current))}
+                        onChange={(event) => {
+                          const next = [...uploadInstructionRows]
+                          next[index] = event.target.value
+                          setUploadInstructionRows(next)
+                        }}
+                      />
+                      {uploadInstructionRows.length > 1 ? (
+                        <div className="instruction-actions">
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label="Move instruction up"
+                            disabled={index === 0}
+                            onClick={() => moveInstructionStep(setUploadInstructionRows, index, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label="Move instruction down"
+                            disabled={index === uploadInstructionRows.length - 1}
+                            onClick={() => moveInstructionStep(setUploadInstructionRows, index, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button type="button" className="icon-button" aria-label="Remove instruction step" onClick={() => removeInstructionStep(setUploadInstructionRows, index)}>
+                            X
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button type="button" className="secondary-button" onClick={() => addInstructionStep(setUploadInstructionRows)}>
+                    Add Step
+                  </button>
+                </div>
+                <div className="subsection-block">
+                  <h3>Nutrition (based on default servings)</h3>
+                  <div className="nutrition-grid editor-grid">
+                    <label>
+                      Calories
+                      <input name="calories" type="number" min="0" placeholder="540" />
+                    </label>
+                    <label>
+                      Protein (g)
+                      <input name="protein" type="number" min="0" placeholder="42" />
+                    </label>
+                    <label>
+                      Carbs (g)
+                      <input name="carbs" type="number" min="0" placeholder="18" />
+                    </label>
+                    <label>
+                      Fat (g)
+                      <input name="fat" type="number" min="0" placeholder="25" />
+                    </label>
+                    <label>
+                      Fiber (g)
+                      <input name="fiber" type="number" min="0" placeholder="6" />
+                    </label>
+                  </div>
                 </div>
                 <label>
                   Nutrition notes
@@ -1218,22 +1730,42 @@ function App() {
                 <div className="stack-list">
                   {loading ? <p className="muted">Loading recipes…</p> : null}
                   {filteredRecipes.map((recipe) => (
-                    <article key={recipe.id} className="recipe-card">
-                      <div className="recipe-thumb" aria-hidden="true" />
+                    <article
+                      key={recipe.id}
+                      className="recipe-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openRecipeDetails(recipe.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openRecipeDetails(recipe.id)
+                        }
+                      }}
+                    >
+                      <div
+                        className={recipe.imageUrl ? 'recipe-thumb has-image' : 'recipe-thumb'}
+                        aria-hidden="true"
+                        style={recipe.imageUrl ? { backgroundImage: `url(${resolveImageUrl(recipe.imageUrl)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                      />
                       <div className="recipe-copy">
                         <h3>{recipe.title}</h3>
                         <p>{recipe.description}</p>
-                        <p>Serves {recipe.servings}</p>
+                        <p>{getRecipeServingRangeText(recipe)}</p>
                         <p className="muted">
                           {recipe.ingredients.slice(0, 3).map((ingredient) => formatIngredient(ingredient)).join(' • ')}
                         </p>
-                        <button type="button" className="inline-link" onClick={() => setSelectedRecipeId(recipe.id)}>
-                          View Details
-                        </button>
                         {isRecipeInMealPlan(recipe.id) ? (
                           <div className="meal-plan-status-badge">Added to Meal Plan</div>
                         ) : (
-                          <button type="button" className="primary-button" onClick={() => toggleMealPlanRecipe(recipe)}>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              toggleMealPlanRecipe(recipe)
+                            }}
+                          >
                             Add To Meal Plan
                           </button>
                         )}
@@ -1311,12 +1843,54 @@ function App() {
                 <p className="muted">No recipes selected yet.</p>
               ) : (
                 mealPlan.map((recipe, index) => (
-                  <div key={`${recipe.id}-${index}`} className="plan-item">
+                  <div
+                    key={`${recipe.id}-${index}`}
+                    className="plan-item"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openRecipeDetails(recipe.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openRecipeDetails(recipe.id)
+                      }
+                    }}
+                  >
                     <div>
                       <h3>{recipe.title}</h3>
-                      <p>Serves {recipe.servings}</p>
+                      <div className="plan-serving-row">
+                        <span>Servings</span>
+                        <div className="servings-stepper" onClick={(event) => event.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="stepper-button"
+                            aria-label={`Decrease servings for ${recipe.title}`}
+                            onClick={() => updateMealPlanServings(recipe.id, (recipe.servings ?? 1) - 1)}
+                            disabled={recipe.servings <= (recipe.servingsMin ?? 1)}
+                          >
+                            −
+                          </button>
+                          <span className="servings-total">{recipe.servings}</span>
+                          <button
+                            type="button"
+                            className="stepper-button"
+                            aria-label={`Increase servings for ${recipe.title}`}
+                            onClick={() => updateMealPlanServings(recipe.id, (recipe.servings ?? 1) + 1)}
+                            disabled={recipe.servings >= (recipe.servingsMax ?? recipe.defaultServings ?? recipe.servings)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button type="button" className="secondary-button" onClick={() => removeMealPlanItem(index)}>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        removeMealPlanItem(index)
+                      }}
+                    >
                       Remove
                     </button>
                   </div>
@@ -1404,7 +1978,14 @@ function App() {
             key={tab.key}
             type="button"
             className={activeTab === tab.key ? 'nav-button active' : 'nav-button'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => {
+              if (tab.key === 'recipes') {
+                setSelectedRecipeId(null)
+                setEditingRecipeId(null)
+                setShowUploadForm(false)
+              }
+              setActiveTab(tab.key)
+            }}
           >
             {tab.label}
           </button>
