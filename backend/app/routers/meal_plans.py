@@ -18,6 +18,58 @@ from app.schemas import MealPlanCreate
 router = APIRouter()
 
 
+def canonicalize_ingredient_unit(unit: str | None) -> str:
+    normalized = (unit or "").strip().lower()
+    if not normalized or normalized == "item":
+        return ""
+
+    singular_map = {
+        "cup": "cup",
+        "cups": "cup",
+        "tablespoon": "tablespoon",
+        "tablespoons": "tablespoon",
+        "tbsp": "tbsp",
+        "teaspoon": "teaspoon",
+        "teaspoons": "teaspoon",
+        "tsp": "tsp",
+        "ounce": "oz",
+        "ounces": "oz",
+        "oz": "oz",
+        "pound": "lb",
+        "pounds": "lb",
+        "lb": "lb",
+        "lbs": "lb",
+        "whole": "whole",
+        "piece": "piece",
+        "pieces": "piece",
+        "slice": "slice",
+        "slices": "slice",
+        "clove": "clove",
+        "cloves": "clove",
+        "head": "head",
+        "heads": "head",
+        "can": "can",
+        "cans": "can",
+        "bunch": "bunch",
+        "bunches": "bunch",
+        "sprig": "sprig",
+        "sprigs": "sprig",
+        "gram": "g",
+        "grams": "g",
+        "g": "g",
+        "litre": "l",
+        "liters": "l",
+        "liter": "l",
+        "litres": "l",
+        "l": "l",
+        "milliliter": "ml",
+        "milliliters": "ml",
+        "ml": "ml",
+    }
+
+    return singular_map.get(normalized, normalized)
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -89,7 +141,7 @@ def generate_grocery_items(meal_plan_id: int, db: Session) -> list[dict[str, obj
         .filter(MealPlanRecipe.meal_plan_id == meal_plan_id)
         .all()
     )
-    grouped: dict[tuple[str, str | None], dict[str, object]] = {}
+    grouped: dict[tuple[str, str], dict[str, object]] = {}
 
     for link in links:
         recipe = db.query(Recipe).filter(Recipe.id == link.recipe_id).first()
@@ -100,13 +152,14 @@ def generate_grocery_items(meal_plan_id: int, db: Session) -> list[dict[str, obj
             link.servings / recipe.default_servings if recipe.default_servings else 1
         )
         for ingredient in recipe.ingredients:
-            key = (ingredient.normalized_name, ingredient.unit)
+            unit_key = canonicalize_ingredient_unit(ingredient.unit)
+            key = (ingredient.normalized_name, unit_key)
             if key not in grouped:
                 grouped[key] = {
                     "display_name": ingredient.display_name,
                     "normalized_name": ingredient.normalized_name,
                     "quantity": 0.0,
-                    "unit": ingredient.unit,
+                    "unit": unit_key,
                     "source_recipe_names": set(),
                 }
 
