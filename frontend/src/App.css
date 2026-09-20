@@ -1,0 +1,409 @@
+.app-shell {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #f8f2eb;
+  position: relative;
+  padding-bottom: 84px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 18px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid #ece2d9;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #7a6a61;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.topbar h1 {
+  margin: 6px 0 0;
+  font-size: 2rem;
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-pill.online {
+  background: rgba(42, 157, 143, 0.12);
+  color: #248a7a;
+}
+
+.status-pill.offline {
+  background: rgba(185, 109, 90, 0.12);
+  color: #a44c3f;
+}
+
+.page {
+  padding: 18px;
+}
+
+.panel {
+  background: #fffdfb;
+  border: 1px solid #ebdfd5;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(40, 28, 19, 0.05);
+}
+
+.search-panel {
+  margin-bottom: 16px;
+}
+
+.search-panel input,
+.manual-row input,
+.upload-form input,
+.upload-form textarea {
+  width: 100%;
+  border: 1px solid #e7ddd2;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chip {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #f0e7e0;
+  color: #3a2d29;
+  font-weight: 700;
+}
+
+.chip.active {
+  background: #e76f51;
+  color: white;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.text-button,
+.primary-button,
+.secondary-button,
+.nav-button,
+.inline-link {
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.text-button {
+  background: transparent;
+  color: #bb5c43;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  padding: 10px 14px;
+}
+
+.primary-button {
+  background: #e76f51;
+  color: white;
+}
+
+.secondary-button {
+  background: #f7e7df;
+  color: #b75b42;
+}
+
+.danger-button {
+  background: #f9e3de;
+  color: #9d3d30;
+}
+
+.stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recipe-card,
+.plan-item,
+.grocery-item {
+  background: white;
+  border: 1px solid #eddccf;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.recipe-card {
+  display: flex;
+  gap: 12px;
+}
+
+.recipe-thumb {
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5cd9c, #ec9d64);
+  flex-shrink: 0;
+}
+
+.recipe-copy {
+  flex: 1;
+}
+
+.recipe-copy h3,
+.plan-item h3,
+.grocery-item strong {
+  margin: 0 0 4px;
+}
+
+.recipe-copy p,
+.plan-item p,
+.grocery-item small,
+.muted {
+  margin: 0;
+  color: #6d5d57;
+}
+
+.inline-link {
+  background: transparent;
+  color: #bb5c43;
+  padding: 0;
+  margin: 8px 0 0;
+  text-align: left;
+}
+
+.recipe-copy .primary-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recipe-detail-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.detail-thumb {
+  width: 96px;
+  height: 96px;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #5e4c46;
+  font-size: 0.85rem;
+}
+
+.meta-row span {
+  background: #f4ece6;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.detail-section h3 {
+  margin: 0 0 8px;
+}
+
+.detail-section ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #4a3d39;
+}
+
+.nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.nutrition-grid span {
+  background: #f6efe9;
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #433732;
+  font-size: 0.83rem;
+}
+
+.nutrition-note {
+  margin: 10px 0 0;
+  color: #6d5d57;
+}
+
+.editor-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.83rem;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 23, 18, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 30;
+}
+
+.confirm-dialog {
+  width: min(100%, 320px);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 8px;
+}
+
+.confirm-dialog p {
+  margin: 0 0 16px;
+  color: #614f48;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.plan-item,
+.grocery-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manual-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.grocery-list .grocery-item {
+  align-items: center;
+}
+
+.grocery-item input {
+  width: 20px;
+  height: 20px;
+  accent-color: #2a9d8f;
+}
+
+.grocery-item.checked {
+  opacity: 0.7;
+}
+
+.grocery-item.checked strong {
+  text-decoration: line-through;
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #4a3d39;
+  font-weight: 600;
+}
+
+.upload-form textarea {
+  resize: vertical;
+}
+
+.wide-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 430px);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid #ece2d9;
+  backdrop-filter: blur(8px);
+}
+
+.nav-button {
+  background: transparent;
+  color: #5f514b;
+  padding: 14px 8px;
+}
+
+.nav-button.active {
+  background: #f7e4dc;
+  color: #a24f39;
+}
+
+@media (max-width: 420px) {
+  .topbar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .page {
+    padding: 14px;
+  }
+}
