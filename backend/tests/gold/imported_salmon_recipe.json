@@ -1,0 +1,224 @@
+{
+    "title": "\"Everything Spice\" Baked Salmon Rice Bowl with Avocado & Tomatoes",
+    "keywords": [],
+    "ingredients": [
+        {
+            "display_name": "avocado",
+            "normalized_name": "avocado",
+            "quantity": 0.5,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "capers",
+            "normalized_name": "capers",
+            "quantity": 1.0,
+            "unit": "tbsp",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "small bunch fresh dill",
+            "normalized_name": "small bunch fresh dill",
+            "quantity": 0.5,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "pint grape tomatoes",
+            "normalized_name": "pint grape tomatoes",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "jasmine rice",
+            "normalized_name": "jasmine rice",
+            "quantity": 0.5,
+            "unit": "cup",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "lemon",
+            "normalized_name": "lemon",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "salmon fillet",
+            "normalized_name": "salmon fillet",
+            "quantity": 0.75,
+            "unit": "lb",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "black pepper",
+            "normalized_name": "black pepper",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "dijon mustard",
+            "normalized_name": "dijon mustard",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "extra virgin olive oil",
+            "normalized_name": "extra virgin olive oil",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "garlic powder",
+            "normalized_name": "garlic powder",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "onion powder",
+            "normalized_name": "onion powder",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "poppy seeds",
+            "normalized_name": "poppy seeds",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "salt",
+            "normalized_name": "salt",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "sesame seeds",
+            "normalized_name": "sesame seeds",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        }
+    ],
+    "instructions": [
+        {
+            "step_number": 1,
+            "instruction": "Preheat oven to 450°F."
+        },
+        {
+            "step_number": 2,
+            "instruction": "Using a strainer or colander, rinse the rice under cold, running water, then drain and transfer to a small saucepan. Add water and bring the mixture to a boil over high heat. ½ cup jasmine rice 1 cup water"
+        },
+        {
+            "step_number": 3,
+            "instruction": "Meanwhile, wash and dry the fresh produce. 1 pint grape tomatoes lemon ½ small bunch fresh dill ½ avocado"
+        },
+        {
+            "step_number": 4,
+            "instruction": "Once the liquid comes to a boil, stir the mixture, cover the saucepan, and reduce heat to low. Cook rice until liquid is fully absorbed, 15-18 minutes. Once done, remove rice from the heat and let it stand, still covered, for 5 minutes."
+        },
+        {
+            "step_number": 5,
+            "instruction": "While the rice is cooking, transfer tomatoes to a baking sheet pan. Drizzle with oil and season with salt. Stir to coat and spread out in an even layer. 2 tsp extra virgin olive oil ¼ tsp salt"
+        },
+        {
+            "step_number": 6,
+            "instruction": "Place baking sheet in the oven (it doesn't have to be fully heated) and roast, stirring halfway through, until tomatoes are just beginning to burst, about 10 minutes."
+        },
+        {
+            "step_number": 7,
+            "instruction": "Meanwhile, place seeds and spices in a small bowl; stir to combine the \"everything spice\" mixture. 2 tsp sesame seeds 1 tsp poppy seeds ¼ tsp garlic powder ¼ tsp onion powder ¼ tsp black pepper"
+        },
+        {
+            "step_number": 8,
+            "instruction": "Pat the salmon dry with paper towels, season with salt, and place, skin-side down, on a plate. Spread the top-side with Dijon, then sprinkle evenly with the spice mixture, pressing gently to adhere. (Reserve bowl for later use.) ¾ lb salmon fillet ¼ tsp salt 1 tbsp Dijon mustard"
+        },
+        {
+            "step_number": 9,
+            "instruction": "When the tomatoes are starting to burst, remove from the oven. Add salmon to the baking sheet, nestling the fillets into the tomatoes."
+        },
+        {
+            "step_number": 10,
+            "instruction": "Return baking sheet to the oven and continue to roast until the tomatoes are browned and salmon is cooked through, 7-8 minutes more. Remove from oven."
+        },
+        {
+            "step_number": 11,
+            "instruction": "Meanwhile, zest and juice lemon into the reserved bowl."
+        },
+        {
+            "step_number": 12,
+            "instruction": "Shave dill leaves off the stems; discard stems and roughly chop the leaves. Add to the bowl with the lemon along with oil, salt, and pepper. Stir to combine the dressing and set aside. 1 tbsp extra virgin olive oil ⅛ tsp salt ⅛ tsp black pepper"
+        },
+        {
+            "step_number": 13,
+            "instruction": "Halve and pit avocado. Halve lengthwise and slice thinly while still in the skin, then scoop out with a spoon."
+        },
+        {
+            "step_number": 14,
+            "instruction": "To serve, divide rice between bowls. Top with salmon, roasted tomatoes, avocado, and capers, then drizzle with dressing. Enjoy! 1 tbsp capers"
+        }
+    ],
+    "tools": [
+        "baking sheet pan",
+        "chef's knife",
+        "citrus juicer (optional)",
+        "colander",
+        "cutting board",
+        "grater (optional)",
+        "measuring cups",
+        "measuring spoons",
+        "mixing bowls",
+        "oven mitts",
+        "small saucepan",
+        "stirring spoon"
+    ],
+    "default_servings": 2,
+    "min_servings": 1,
+    "max_servings": 2,
+    "nutrition": {
+        "calories": null,
+        "protein_g": null,
+        "carbs_g": null,
+        "fat_g": null,
+        "fiber_g": null,
+        "notes": null
+    }
+}

@@ -1,0 +1,197 @@
+{
+    "title": "Chicken, Bell Pepper & Cashew Stir-Fry over Rice",
+    "keywords": [],
+    "ingredients": [
+        {
+            "display_name": "basmati rice",
+            "normalized_name": "basmati rice",
+            "quantity": 0.5,
+            "unit": "cup",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "cashews, roasted unsalted",
+            "normalized_name": "cashews, roasted unsalted",
+            "quantity": 0.25,
+            "unit": "cup",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "chicken thighs, boneless skinless",
+            "normalized_name": "chicken thighs, boneless skinless",
+            "quantity": 1.0,
+            "unit": "lb",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "garlic",
+            "normalized_name": "garlic",
+            "quantity": 2.0,
+            "unit": "clove",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "(1 inch) piece ginger root",
+            "normalized_name": "(1 inch) piece ginger root",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "green bell peppers",
+            "normalized_name": "green bell peppers",
+            "quantity": 2.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "small bunch green onions (scallions)",
+            "normalized_name": "small bunch green onions (scallions)",
+            "quantity": 0.5,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "brown sugar",
+            "normalized_name": "brown sugar",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "cornstarch",
+            "normalized_name": "cornstarch",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "rice vinegar",
+            "normalized_name": "rice vinegar",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "soy sauce",
+            "normalized_name": "soy sauce",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        },
+        {
+            "display_name": "toasted sesame oil",
+            "normalized_name": "toasted sesame oil",
+            "quantity": 1.0,
+            "unit": "",
+            "is_optional": false,
+            "notes": null
+
+        }
+    ],
+    "instructions": [
+        {
+            "step_number": 1,
+            "instruction": "Using a strainer or colander, rinse the rice under cold, running water, then drain and transfer to a small saucepan. Add water and bring the mixture to a boil over high heat. ½ cup basmati rice 1 cup water"
+        },
+        {
+            "step_number": 2,
+            "instruction": "Once the liquid comes to a boil, stir the mixture, cover the saucepan, and reduce the heat to low. Cook the rice until the liquid is fully absorbed, 15-18 minutes. Once done, remove the rice from the heat and let it stand, still covered, for 5 minutes."
+        },
+        {
+            "step_number": 3,
+            "instruction": "Meanwhile, wash and dry the fresh produce. (1 inch) piece ginger root 2 green bell peppers ½ small bunch green onions (scallions)"
+        },
+        {
+            "step_number": 4,
+            "instruction": "Peel and mince ginger. Peel and mince garlic. 2 cloves garlic"
+        },
+        {
+            "step_number": 5,
+            "instruction": "Place soy sauce, oil, cornstarch, vinegar, and sugar in a small bowl; whisk to combine the sauce. ¼ cup soy sauce 1 tbsp toasted sesame oil 2 tsp cornstarch ½ tsp rice vinegar ½ tsp brown sugar"
+        },
+        {
+            "step_number": 6,
+            "instruction": "Seed and medium dice bell peppers."
+        },
+        {
+            "step_number": 7,
+            "instruction": "Cut chicken thighs into ½-inch pieces. 1 lb chicken thighs, boneless skinless"
+        },
+        {
+            "step_number": 8,
+            "instruction": "Heat a large skillet over high heat."
+        },
+        {
+            "step_number": 9,
+            "instruction": "Once the skillet is hot, add oil and swirl to coat the bottom. 1 tsp toasted sesame oil"
+        },
+        {
+            "step_number": 10,
+            "instruction": "Add chicken and stir-fry for 2-3 minutes. Add ginger, garlic, and bell peppers; continue to cook, stirring often, until veggies begin to soften, 2-3 more minutes."
+        },
+        {
+            "step_number": 11,
+            "instruction": "Pour sauce into the skillet. Reduce heat to medium-high and cook, stirring often, until the sauce thickens, 4-5 minutes."
+        },
+        {
+            "step_number": 12,
+            "instruction": "Meanwhile, trim green onions on a clean cutting board and cut crosswise into ¼-inch pieces."
+        },
+        {
+            "step_number": 13,
+            "instruction": "Add cashews to the skillet and stir to combine. ¼ cup cashews, roasted unsalted"
+        },
+        {
+            "step_number": 14,
+            "instruction": "To serve, divide rice between bowls; top with chicken stir-fry and green onions. Enjoy!"
+        }
+    ],
+    "tools": [
+        "chef's knife",
+        "colander",
+        "cutting board",
+        "garlic press (optional)",
+        "measuring cups",
+        "measuring spoons",
+        "mixing bowls",
+        "nonstick skillet",
+        "small saucepan",
+        "stirring spoon",
+        "vegetable peeler",
+        "whisk or fork"
+    ],
+    "default_servings": 2,
+    "min_servings": 1,
+    "max_servings": 2,
+    "nutrition": {
+        "calories": null,
+        "protein_g": null,
+        "carbs_g": null,
+        "fat_g": null,
+        "fiber_g": null,
+        "notes": null
+    }
+}

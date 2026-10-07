@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 type TabKey = 'recipes' | 'plan' | 'grocery'
@@ -24,6 +24,25 @@ type RecipeIngredient = {
 type RecipeInstruction = {
   step_number: number
   instruction: string
+}
+
+type ImportedRecipe = {
+  title: string
+  keywords: string[]
+  ingredients: Omit<RecipeIngredient, 'is_optional' | 'notes'>[]
+  instructions: RecipeInstruction[]
+  tools: string[]
+  default_servings: number
+  min_servings: number
+  max_servings: number
+  nutrition: {
+    calories: number | null
+    protein_g: number | null
+    carbs_g: number | null
+    fat_g: number | null
+    fiber_g: number | null
+    notes: string | null
+  }
 }
 
 type Recipe = {
@@ -142,6 +161,31 @@ const normalizeIngredientUnit = (unit: string): string => {
 }
 
 const normalizeDisplayName = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase()
+
+const extractRecipeFromFiles = async (files: File[]): Promise<ImportedRecipe> => {
+  const formData = new FormData()
+  if (files.length === 1) {
+    formData.append('file', files[0])
+  } else {
+    files.forEach((file) => formData.append('files', file))
+  }
+
+  const response = await fetch(`${API_BASE}/recipes/import`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Import request failed with status ${response.status}`)
+  }
+
+  const data = await response.json()
+  if (!data.recipe || typeof data.recipe !== 'object') {
+    throw new Error('Import response did not contain a recipe')
+  }
+
+  return data.recipe as ImportedRecipe
+}
 
 const resolveImageUrl = (imageUrl?: string | null): string | null => {
   if (!imageUrl) {
@@ -439,6 +483,7 @@ function App() {
   const [manualItemRow, setManualItemRow] = useState<{ name: string; quantity: string; unit: string }>(
     createIngredientRow()
   )
+  const importFileInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState<boolean>(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
@@ -456,6 +501,8 @@ function App() {
   const [uploadCookwareRows, setUploadCookwareRows] = useState<string[]>([createCookwareRow()])
   const [uploadImageUrl, setUploadImageUrl] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [importingRecipeFiles, setImportingRecipeFiles] = useState(false)
+  const [pendingImportFiles, setPendingImportFiles] = useState<File[]>([])
   const [expandedUploadInstructionIndex, setExpandedUploadInstructionIndex] = useState<number | null>(null)
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
   const [editIngredientRows, setEditIngredientRows] = useState<Array<{ name: string; quantity: string; unit: string }>>([
@@ -918,6 +965,118 @@ function App() {
     }
   }
 
+  const applyImportedRecipe = (imported: ImportedRecipe) => {
+    if (!imported.title.trim()) {
+      window.alert('This file does not contain readable recipe text. Please try a clearer file or add more OCR tuning later.')
+      return false
+    }
+
+    const nextIngredientRows = imported.ingredients.length
+      ? imported.ingredients.map((ingredient) => ({
+          name: ingredient.display_name,
+          quantity: String(ingredient.quantity || 1),
+          unit: ingredient.unit || '',
+        }))
+      : [createIngredientRow()]
+
+    const nextInstructions = imported.instructions.length
+      ? imported.instructions.map((instruction) => instruction.instruction)
+      : [createInstructionStep()]
+    const nextTools = imported.tools.length ? imported.tools : [createCookwareRow()]
+
+    setUploadIngredientRows(nextIngredientRows)
+    setUploadInstructionRows(nextInstructions)
+    setUploadCookwareRows(nextTools)
+    setUploadImageUrl(null)
+    setShowUploadForm(true)
+
+    window.setTimeout(() => {
+      const form = document.querySelector('.upload-form') as HTMLFormElement | null
+      if (!form) {
+        return
+      }
+
+      const titleField = form.querySelector('input[name="title"]') as HTMLInputElement | null
+      const keywordsField = form.querySelector('input[name="keywords"]') as HTMLInputElement | null
+      const defaultField = form.querySelector('input[name="defaultServings"]') as HTMLInputElement | null
+      const minField = form.querySelector('input[name="minServings"]') as HTMLInputElement | null
+      const maxField = form.querySelector('input[name="maxServings"]') as HTMLInputElement | null
+      const caloriesField = form.querySelector('input[name="calories"]') as HTMLInputElement | null
+      const proteinField = form.querySelector('input[name="protein"]') as HTMLInputElement | null
+      const carbsField = form.querySelector('input[name="carbs"]') as HTMLInputElement | null
+      const fatField = form.querySelector('input[name="fat"]') as HTMLInputElement | null
+      const fiberField = form.querySelector('input[name="fiber"]') as HTMLInputElement | null
+      const notesField = form.querySelector('input[name="nutritionNotes"]') as HTMLInputElement | null
+
+      if (titleField) titleField.value = imported.title
+      if (keywordsField) keywordsField.value = imported.keywords.join(', ')
+      if (defaultField) defaultField.value = String(imported.default_servings || 2)
+      if (minField) minField.value = String(imported.min_servings || 1)
+      if (maxField) maxField.value = String(imported.max_servings || imported.default_servings || 2)
+      if (caloriesField) caloriesField.value = imported.nutrition.calories == null ? '' : String(imported.nutrition.calories)
+      if (proteinField) proteinField.value = imported.nutrition.protein_g == null ? '' : String(imported.nutrition.protein_g)
+      if (carbsField) carbsField.value = imported.nutrition.carbs_g == null ? '' : String(imported.nutrition.carbs_g)
+      if (fatField) fatField.value = imported.nutrition.fat_g == null ? '' : String(imported.nutrition.fat_g)
+      if (fiberField) fiberField.value = imported.nutrition.fiber_g == null ? '' : String(imported.nutrition.fiber_g)
+      if (notesField) notesField.value = imported.nutrition.notes || ''
+    }, 0)
+    return true
+  }
+
+  const importRecipeFiles = async (files: File[]) => {
+    if (!files.length) return
+    try {
+      setImportingRecipeFiles(true)
+      const imported = await extractRecipeFromFiles(files)
+      if (applyImportedRecipe(imported)) setPendingImportFiles([])
+    } catch {
+      window.alert('Unable to import those files. Please use text, PDF, or image recipe files.')
+    } finally {
+      setImportingRecipeFiles(false)
+    }
+  }
+
+  const handleImportRecipeFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+
+    const unsupportedFile = files.find((file) => {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      const isImageFile = file.type.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif)$/i.test(file.name)
+      const isTextFile =
+        file.type.startsWith('text/') ||
+        /\.(txt|md|json|csv|yaml|yml|html|htm|rtf)$/i.test(file.name)
+      return !isTextFile && !isPdf && !isImageFile
+    })
+
+    if (unsupportedFile) {
+      window.alert('This file type is not supported yet. Please import a text file, PDF, or image recipe.')
+      event.target.value = ''
+      return
+    }
+
+    if (files.length > 1 || pendingImportFiles.length > 0) {
+      setPendingImportFiles((current) => [...current, ...files])
+    } else {
+      await importRecipeFiles(files)
+    }
+    event.target.value = ''
+  }
+
+  const movePendingImportFile = (index: number, offset: -1 | 1) => {
+    setPendingImportFiles((current) => {
+      const targetIndex = index + offset
+      if (targetIndex < 0 || targetIndex >= current.length) return current
+      const next = [...current]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+  }
+
+  const removePendingImportFile = (index: number) => {
+    setPendingImportFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))
+  }
+
   const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
@@ -1003,6 +1162,8 @@ function App() {
     setUploadInstructionRows([createInstructionStep()])
     setUploadCookwareRows([createCookwareRow()])
     setUploadImageUrl(null)
+    setShowUploadForm(false)
+    setSelectedRecipeId(localRecipe.id)
     setActiveTab('recipes')
     event.currentTarget.reset()
 
@@ -1019,7 +1180,9 @@ function App() {
 
       if (response.ok) {
         const created = await response.json()
-        setRecipes((current) => [normalizeRecipe(created), ...current.filter((item) => item.id !== localRecipe.id)])
+        const normalizedCreated = normalizeRecipe(created)
+        setRecipes((current) => [normalizedCreated, ...current.filter((item) => item.id !== localRecipe.id)])
+        setSelectedRecipeId(normalizedCreated.id)
       }
     } catch {
       // Keep local draft when the server is temporarily unavailable.
@@ -1254,7 +1417,7 @@ function App() {
               </div>
 
               <div className="detail-section">
-                <h3>Ingredients</h3>
+                <h3>Ingredients ({getRecipeDefaultServings(selectedRecipe)} Serving{getRecipeDefaultServings(selectedRecipe) !== 1 ? 's' : ''})</h3>
                 <ul>
                   {selectedRecipe.ingredients.map((ingredient, index) => (
                     <li key={`${selectedRecipe.id}-${ingredient.normalized_name}-${index}`}>
@@ -1510,10 +1673,89 @@ function App() {
             <section className="panel upload-panel">
               <div className="section-header">
                 <h2>Upload Recipe</h2>
-                <button type="button" className="text-button" onClick={() => setShowUploadForm(false)}>
-                  Back
-                </button>
+                <div className="section-header-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={importingRecipeFiles}
+                    onClick={() => importFileInputRef.current?.click()}
+                  >
+                    {importingRecipeFiles ? 'Importing…' : 'Import'}
+                  </button>
+                  <button type="button" className="text-button" onClick={() => setShowUploadForm(false)}>
+                    Back
+                  </button>
+                </div>
               </div>
+
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".txt,.md,.json,.csv,.yaml,.yml,.html,.htm,.rtf,image/*"
+                multiple
+                hidden
+                onChange={(event) => void handleImportRecipeFile(event)}
+              />
+
+              {pendingImportFiles.length > 0 ? (
+                <div className="pending-import-list" aria-label="Files to import in order">
+                  <div className="section-header">
+                    <h3>Recipe pages</h3>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => importFileInputRef.current?.click()}
+                    >
+                      Add files
+                    </button>
+                  </div>
+                  <ol>
+                    {pendingImportFiles.map((file, index) => (
+                      <li key={`${file.name}-${file.lastModified}-${index}`}>
+                        <span>{file.name}</span>
+                        <div className="pending-import-actions">
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label={`Move ${file.name} up`}
+                            disabled={index === 0}
+                            onClick={() => movePendingImportFile(index, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="move-button"
+                            aria-label={`Move ${file.name} down`}
+                            disabled={index === pendingImportFiles.length - 1}
+                            onClick={() => movePendingImportFile(index, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-button"
+                            aria-label={`Remove ${file.name}`}
+                            onClick={() => removePendingImportFile(index)}
+                          >
+                            X
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                  <button
+                    type="button"
+                    className="primary-button wide-button"
+                    disabled={importingRecipeFiles}
+                    onClick={() => void importRecipeFiles(pendingImportFiles)}
+                  >
+                    {importingRecipeFiles
+                      ? 'Importing…'
+                      : `Import ${pendingImportFiles.length} files`}
+                  </button>
+                </div>
+              ) : null}
 
               <form className="upload-form" onSubmit={handleUploadSubmit}>
                 <label>

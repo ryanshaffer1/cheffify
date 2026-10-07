@@ -47,6 +47,22 @@ class RecipeRead(RecipeCreate):
     id: int
 
 
+class ImportedRecipeBase(BaseModel):
+    title: str
+    keywords: list[str] = []
+    ingredients: list[IngredientBase] = []
+    instructions: list[InstructionBase] = []
+    tools: list[str] = []
+    default_servings: int = Field(gt=0)
+    min_servings: int = Field(gt=0)
+    max_servings: int = Field(gt=0)
+    nutrition: NutritionBase = NutritionBase()
+
+
+class ImportedRecipeRead(ImportedRecipeBase):
+    pass
+
+
 class MealPlanCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     recipe_ids: list[int] = []

@@ -124,6 +124,50 @@
   gap: 8px;
 }
 
+.pending-import-list {
+  margin: 0 0 20px;
+  padding: 14px 0;
+  border-top: 1px solid #eadfd8;
+  border-bottom: 1px solid #eadfd8;
+}
+
+.pending-import-list .section-header {
+  margin-bottom: 8px;
+}
+
+.pending-import-list h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pending-import-list ol {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.pending-import-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding-left: 4px;
+}
+
+.pending-import-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pending-import-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
 .plan-actions {
   display: flex;
   gap: 8px;

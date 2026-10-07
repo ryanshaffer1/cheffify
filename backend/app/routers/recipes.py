@@ -5,6 +5,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.recipe_parsing import (
+    extract_text_from_file,
+    merge_text_with_overlap,
+    parse_recipe,
+)
 from app.models import (
     Recipe,
     RecipeIngredient,
@@ -13,7 +18,7 @@ from app.models import (
     RecipeNutrition,
     RecipeTool,
 )
-from app.schemas import RecipeCreate, RecipeRead
+from app.schemas import ImportedRecipeRead, RecipeCreate, RecipeRead
 
 router = APIRouter()
 UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "recipes"
@@ -47,6 +52,36 @@ def upload_recipe_image(file: UploadFile = File(...)) -> dict[str, str]:
     destination.write_bytes(contents)
 
     return {"image_url": f"/uploads/recipes/{filename}"}
+
+
+@router.post("/import", response_model=dict[str, object])
+def import_recipe_text(
+    file: UploadFile | None = None,
+    files: list[UploadFile] | None = None,
+) -> dict[str, object]:
+    uploaded_files = files if files else ([file] if file else [])
+    if not uploaded_files or any(
+        not uploaded_file.filename for uploaded_file in uploaded_files
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided"
+        )
+
+    extracted_pages = []
+    for uploaded_file in uploaded_files:
+        suffix = Path(uploaded_file.filename or "").suffix.lower()
+        filename = f"{uuid.uuid4().hex}{suffix}"
+        destination = UPLOAD_DIR / filename
+        destination.write_bytes(uploaded_file.file.read())
+        extracted_pages.append(extract_text_from_file(destination))
+
+    extracted_text = merge_text_with_overlap(extracted_pages)
+    parsed_recipe = parse_recipe(extracted_text)
+
+    return {
+        "text": extracted_text,
+        "recipe": ImportedRecipeRead.model_validate(parsed_recipe).model_dump(),
+    }
 
 
 @router.get("", response_model=list[RecipeRead])
