@@ -6,6 +6,7 @@ This repository contains the product documentation for the Cheffify meal-plannin
 
 - [MVP Roadmap](docs/mvp-roadmap.md)
 - [Technical Specification](docs/technical-spec.md)
+- [Frontend Structure and Responsibilities](docs/frontend-structure.md)
 - [Future Feature List (V2/V3)](docs/future-roadmap.md)
 - [Potential App Names](docs/app-names.md)
 
