@@ -9,7 +9,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "capers",
@@ -18,7 +17,6 @@
             "unit": "tbsp",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "small bunch fresh dill",
@@ -27,7 +25,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "pint grape tomatoes",
@@ -36,7 +33,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "jasmine rice",
@@ -45,7 +41,6 @@
             "unit": "cup",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "lemon",
@@ -54,7 +49,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "salmon fillet",
@@ -63,7 +57,6 @@
             "unit": "lb",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "black pepper",
@@ -72,7 +65,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "dijon mustard",
@@ -81,7 +73,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "extra virgin olive oil",
@@ -90,7 +81,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "garlic powder",
@@ -99,7 +89,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "onion powder",
@@ -108,7 +97,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "poppy seeds",
@@ -117,7 +105,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "salt",
@@ -126,7 +113,6 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         },
         {
             "display_name": "sesame seeds",
@@ -135,65 +121,110 @@
             "unit": "",
             "is_optional": false,
             "notes": null
-
         }
     ],
     "instructions": [
         {
             "step_number": 1,
-            "instruction": "Preheat oven to 450°F."
+            "instruction": "Preheat oven to 450°F.",
+            "ingredient_names": []
         },
         {
             "step_number": 2,
-            "instruction": "Using a strainer or colander, rinse the rice under cold, running water, then drain and transfer to a small saucepan. Add water and bring the mixture to a boil over high heat. ½ cup jasmine rice 1 cup water"
+            "instruction": "Using a strainer or colander, rinse the rice under cold, running water, then drain and transfer to a small saucepan. Add water and bring the mixture to a boil over high heat. ½ cup jasmine rice 1 cup water",
+            "ingredient_names": [
+                "jasmine rice"
+            ]
         },
         {
             "step_number": 3,
-            "instruction": "Meanwhile, wash and dry the fresh produce. 1 pint grape tomatoes lemon ½ small bunch fresh dill ½ avocado"
+            "instruction": "Meanwhile, wash and dry the fresh produce. 1 pint grape tomatoes lemon ½ small bunch fresh dill ½ avocado",
+            "ingredient_names": [
+                "avocado",
+                "small bunch fresh dill",
+                "pint grape tomatoes",
+                "lemon"
+            ]
         },
         {
             "step_number": 4,
-            "instruction": "Once the liquid comes to a boil, stir the mixture, cover the saucepan, and reduce heat to low. Cook rice until liquid is fully absorbed, 15-18 minutes. Once done, remove rice from the heat and let it stand, still covered, for 5 minutes."
+            "instruction": "Once the liquid comes to a boil, stir the mixture, cover the saucepan, and reduce heat to low. Cook rice until liquid is fully absorbed, 15-18 minutes. Once done, remove rice from the heat and let it stand, still covered, for 5 minutes.",
+            "ingredient_names": []
         },
         {
             "step_number": 5,
-            "instruction": "While the rice is cooking, transfer tomatoes to a baking sheet pan. Drizzle with oil and season with salt. Stir to coat and spread out in an even layer. 2 tsp extra virgin olive oil ¼ tsp salt"
+            "instruction": "While the rice is cooking, transfer tomatoes to a baking sheet pan. Drizzle with oil and season with salt. Stir to coat and spread out in an even layer. 2 tsp extra virgin olive oil ¼ tsp salt",
+            "ingredient_names": [
+                "extra virgin olive oil",
+                "salt"
+            ]
         },
         {
             "step_number": 6,
-            "instruction": "Place baking sheet in the oven (it doesn't have to be fully heated) and roast, stirring halfway through, until tomatoes are just beginning to burst, about 10 minutes."
+            "instruction": "Place baking sheet in the oven (it doesn't have to be fully heated) and roast, stirring halfway through, until tomatoes are just beginning to burst, about 10 minutes.",
+            "ingredient_names": []
         },
         {
             "step_number": 7,
-            "instruction": "Meanwhile, place seeds and spices in a small bowl; stir to combine the \"everything spice\" mixture. 2 tsp sesame seeds 1 tsp poppy seeds ¼ tsp garlic powder ¼ tsp onion powder ¼ tsp black pepper"
+            "instruction": "Meanwhile, place seeds and spices in a small bowl; stir to combine the \"everything spice\" mixture. 2 tsp sesame seeds 1 tsp poppy seeds ¼ tsp garlic powder ¼ tsp onion powder ¼ tsp black pepper",
+            "ingredient_names": [
+                "black pepper",
+                "garlic powder",
+                "onion powder",
+                "poppy seeds",
+                "sesame seeds"
+            ]
         },
         {
             "step_number": 8,
-            "instruction": "Pat the salmon dry with paper towels, season with salt, and place, skin-side down, on a plate. Spread the top-side with Dijon, then sprinkle evenly with the spice mixture, pressing gently to adhere. (Reserve bowl for later use.) ¾ lb salmon fillet ¼ tsp salt 1 tbsp Dijon mustard"
+            "instruction": "Pat the salmon dry with paper towels, season with salt, and place, skin-side down, on a plate. Spread the top-side with Dijon, then sprinkle evenly with the spice mixture, pressing gently to adhere. (Reserve bowl for later use.) ¾ lb salmon fillet ¼ tsp salt 1 tbsp Dijon mustard",
+            "ingredient_names": [
+                "salmon fillet",
+                "dijon mustard",
+                "salt"
+            ]
         },
         {
             "step_number": 9,
-            "instruction": "When the tomatoes are starting to burst, remove from the oven. Add salmon to the baking sheet, nestling the fillets into the tomatoes."
+            "instruction": "When the tomatoes are starting to burst, remove from the oven. Add salmon to the baking sheet, nestling the fillets into the tomatoes.",
+            "ingredient_names": []
         },
         {
             "step_number": 10,
-            "instruction": "Return baking sheet to the oven and continue to roast until the tomatoes are browned and salmon is cooked through, 7-8 minutes more. Remove from oven."
+            "instruction": "Return baking sheet to the oven and continue to roast until the tomatoes are browned and salmon is cooked through, 7-8 minutes more. Remove from oven.",
+            "ingredient_names": []
         },
         {
             "step_number": 11,
-            "instruction": "Meanwhile, zest and juice lemon into the reserved bowl."
+            "instruction": "Meanwhile, zest and juice lemon into the reserved bowl.",
+            "ingredient_names": [
+                "lemon"
+            ]
         },
         {
             "step_number": 12,
-            "instruction": "Shave dill leaves off the stems; discard stems and roughly chop the leaves. Add to the bowl with the lemon along with oil, salt, and pepper. Stir to combine the dressing and set aside. 1 tbsp extra virgin olive oil ⅛ tsp salt ⅛ tsp black pepper"
+            "instruction": "Shave dill leaves off the stems; discard stems and roughly chop the leaves. Add to the bowl with the lemon along with oil, salt, and pepper. Stir to combine the dressing and set aside. 1 tbsp extra virgin olive oil ⅛ tsp salt ⅛ tsp black pepper",
+            "ingredient_names": [
+                "lemon",
+                "black pepper",
+                "extra virgin olive oil",
+                "salt"
+            ]
         },
         {
             "step_number": 13,
-            "instruction": "Halve and pit avocado. Halve lengthwise and slice thinly while still in the skin, then scoop out with a spoon."
+            "instruction": "Halve and pit avocado. Halve lengthwise and slice thinly while still in the skin, then scoop out with a spoon.",
+            "ingredient_names": [
+                "avocado"
+            ]
         },
         {
             "step_number": 14,
-            "instruction": "To serve, divide rice between bowls. Top with salmon, roasted tomatoes, avocado, and capers, then drizzle with dressing. Enjoy! 1 tbsp capers"
+            "instruction": "To serve, divide rice between bowls. Top with salmon, roasted tomatoes, avocado, and capers, then drizzle with dressing. Enjoy! 1 tbsp capers",
+            "ingredient_names": [
+                "avocado",
+                "capers"
+            ]
         }
     ],
     "tools": [

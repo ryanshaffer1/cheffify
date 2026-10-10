@@ -3,10 +3,16 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.database import engine
+from app.database_migrations import ensure_instruction_ingredient_links
 from app.main import app
+from app.models import Base
 from app.recipe_parsing import merge_text_with_overlap, parse_recipe
 
 
+Base.metadata.create_all(bind=engine)
+with engine.begin() as connection:
+    ensure_instruction_ingredient_links(connection)
 client = TestClient(app)
 
 
@@ -69,8 +75,16 @@ Fiber: 4g
         {"display_name": "eggs", "normalized_name": "eggs", "quantity": 2, "unit": ""},
     ]
     assert recipe["instructions"] == [
-        {"step_number": 1, "instruction": "Cook the rice."},
-        {"step_number": 2, "instruction": "Stir-fry the vegetables."},
+        {
+            "step_number": 1,
+            "instruction": "Cook the rice.",
+            "ingredient_names": [],
+        },
+        {
+            "step_number": 2,
+            "instruction": "Stir-fry the vegetables.",
+            "ingredient_names": [],
+        },
     ]
     assert recipe["tools"] == ["Saucepan"]
     assert recipe["nutrition"] == {
@@ -86,6 +100,10 @@ Fiber: 4g
 def test_parse_recipe_joins_unmarked_lines_to_numbered_instructions() -> None:
     raw = """Tomato Pasta
 
+Ingredients
+- 2 onions
+- 1/2 cup tomatoes
+
 Instructions
 1. Preheat the oven to 350 degrees.
 2. Chop 2 onions and add 1/2 cup tomatoes.
@@ -96,12 +114,21 @@ Instructions
     recipe = parse_recipe(raw)
 
     assert recipe["instructions"] == [
-        {"step_number": 1, "instruction": "Preheat the oven to 350 degrees."},
+        {
+            "step_number": 1,
+            "instruction": "Preheat the oven to 350 degrees.",
+            "ingredient_names": [],
+        },
         {
             "step_number": 2,
             "instruction": "Chop 2 onions and add 1/2 cup tomatoes. Also dice 3 tomatoes.",
+            "ingredient_names": ["onions", "tomatoes"],
         },
-        {"step_number": 3, "instruction": "Bake for 20 minutes."},
+        {
+            "step_number": 3,
+            "instruction": "Bake for 20 minutes.",
+            "ingredient_names": [],
+        },
     ]
 
 
@@ -109,6 +136,10 @@ def test_parse_recipe_recognizes_bare_numbered_steps_without_splitting_quantitie
     None
 ):
     raw = """Tomato Pasta
+
+Ingredients
+- 2 onions
+- 2 tomatoes
 
 Instructions
 1 Preheat the oven to 350 degrees.
@@ -120,9 +151,21 @@ Also dice tomatoes.
     recipe = parse_recipe(raw)
 
     assert recipe["instructions"] == [
-        {"step_number": 1, "instruction": "Preheat the oven to 350 degrees."},
-        {"step_number": 2, "instruction": "Chop 2 onions. Also dice tomatoes."},
-        {"step_number": 3, "instruction": "Add 2 cups broth and simmer."},
+        {
+            "step_number": 1,
+            "instruction": "Preheat the oven to 350 degrees.",
+            "ingredient_names": [],
+        },
+        {
+            "step_number": 2,
+            "instruction": "Chop 2 onions. Also dice tomatoes.",
+            "ingredient_names": ["onions", "tomatoes"],
+        },
+        {
+            "step_number": 3,
+            "instruction": "Add 2 cups broth and simmer.",
+            "ingredient_names": [],
+        },
     ]
 
 
@@ -153,7 +196,11 @@ def test_import_endpoint_returns_structured_recipe() -> None:
     assert ingredient["quantity"] == 0.5
     assert ingredient["unit"] == "cup"
     assert body["recipe"]["instructions"] == [
-        {"step_number": 1, "instruction": "Cook pasta."}
+        {
+            "step_number": 1,
+            "instruction": "Cook pasta.",
+            "ingredient_names": ["pasta"],
+        }
     ]
 
 
@@ -181,6 +228,54 @@ def test_import_endpoint_accepts_ordered_overlapping_files() -> None:
         "1. Cook pasta.\n2. Drain pasta."
     )
     assert body["recipe"]["instructions"] == [
-        {"step_number": 1, "instruction": "Cook pasta."},
-        {"step_number": 2, "instruction": "Drain pasta."},
+        {
+            "step_number": 1,
+            "instruction": "Cook pasta.",
+            "ingredient_names": ["pasta"],
+        },
+        {
+            "step_number": 2,
+            "instruction": "Drain pasta.",
+            "ingredient_names": ["pasta"],
+        },
     ]
+
+
+def test_create_recipe_persists_instruction_ingredient_links() -> None:
+    response = client.post(
+        "/api/recipes",
+        json={
+            "title": "Lemon Pasta",
+            "default_servings": 2,
+            "ingredients": [
+                {
+                    "display_name": "pasta",
+                    "normalized_name": "pasta",
+                    "quantity": 0.5,
+                    "unit": "cup",
+                }
+            ],
+            "instructions": [
+                {
+                    "step_number": 1,
+                    "instruction": "Cook pasta.",
+                    "ingredient_names": ["pasta"],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    created = response.json()
+    ingredient_id = created["ingredients"][0]["id"]
+    assert created["instructions"] == [
+        {
+            "step_number": 1,
+            "instruction": "Cook pasta.",
+            "ingredient_ids": [ingredient_id],
+        }
+    ]
+
+    saved_response = client.get(f"/api/recipes/{created['id']}")
+    assert saved_response.status_code == 200, saved_response.text
+    assert saved_response.json()["instructions"][0]["ingredient_ids"] == [ingredient_id]

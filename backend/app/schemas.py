@@ -23,9 +23,29 @@ class IngredientBase(BaseModel):
     notes: str | None = None
 
 
+class IngredientEdit(IngredientBase):
+    id: int | None = None
+
+
+class IngredientRead(IngredientBase):
+    id: int
+
+
 class InstructionBase(BaseModel):
     step_number: int
     instruction: str
+    ingredient_names: list[str] = Field(default_factory=list)
+
+
+class InstructionEdit(InstructionBase):
+    ingredient_ids: list[int] = Field(default_factory=list)
+
+
+class InstructionRead(BaseModel):
+    step_number: int
+    instruction: str
+    ingredient_ids: list[int] = Field(default_factory=list)
+    ingredient_names: list[str] = Field(default_factory=list, exclude=True)
 
 
 class RecipeCreate(BaseModel):
@@ -38,13 +58,15 @@ class RecipeCreate(BaseModel):
     source_type: Literal["built_in", "custom"] = "custom"
     keywords: list[str] = []
     tools: list[str] = []
-    ingredients: list[IngredientBase] = []
-    instructions: list[InstructionBase] = []
+    ingredients: list[IngredientEdit] = []
+    instructions: list[InstructionEdit] = []
     nutrition: NutritionBase | None = None
 
 
 class RecipeRead(RecipeCreate):
     id: int
+    ingredients: list[IngredientRead] = []
+    instructions: list[InstructionRead] = []
 
 
 class ImportedRecipeBase(BaseModel):

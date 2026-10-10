@@ -592,7 +592,15 @@
 
 .instruction-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.instruction-entry {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -638,6 +646,70 @@
   min-width: 18px;
   color: #a24f39;
   font-weight: 700;
+  margin-top: 10px;
+}
+
+.ingredient-step-picker {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #eadfd7;
+  border-radius: 12px;
+  background: #fffaf6;
+}
+
+.ingredient-step-picker-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #5f4d46;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ingredient-step-picker-label span:last-child {
+  color: #a24f39;
+  white-space: nowrap;
+}
+
+.ingredient-step-picker-list {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #d6b8a8 transparent;
+  scroll-snap-type: x proximity;
+}
+
+.ingredient-step-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #e1d2c8;
+  border-radius: 999px;
+  background: #fff;
+  color: #5b4942;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.ingredient-step-chip.selected {
+  border-color: #e76f51;
+  background: #e76f51;
+  color: #fff;
+}
+
+.ingredient-step-picker-empty {
+  color: #8a7971;
+  font-size: 0.78rem;
 }
 
 .instruction-list {
@@ -647,6 +719,18 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.instruction-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.instruction-ingredients {
+  color: #7d6c65;
+  font-size: 0.82rem;
+  font-style: italic;
 }
 
 .ingredient-field {

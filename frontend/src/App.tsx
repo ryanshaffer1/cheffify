@@ -13,6 +13,7 @@ type RecipeNutrition = {
 }
 
 type RecipeIngredient = {
+  id?: number
   display_name: string
   normalized_name: string
   quantity: number
@@ -24,6 +25,14 @@ type RecipeIngredient = {
 type RecipeInstruction = {
   step_number: number
   instruction: string
+  ingredient_ids?: number[]
+  ingredient_names?: string[]
+}
+
+type InstructionStep = {
+  instruction: string
+  ingredientIds: number[]
+  ingredientNames: string[]
 }
 
 type ImportedRecipe = {
@@ -337,9 +346,23 @@ const formatGroceryItemText = (item: GroceryItem | { name: string; checked: bool
   }
 }
 
-const createIngredientRow = () => ({ name: '', quantity: '1', unit: '' })
-const createInstructionStep = () => ''
+type IngredientEditorRow = {
+  id?: number
+  name: string
+  quantity: string
+  unit: string
+}
+
+const createIngredientRow = (id?: number): IngredientEditorRow => ({ id, name: '', quantity: '1', unit: '' })
+const createInstructionStep = (): InstructionStep => ({
+  instruction: '',
+  ingredientIds: [],
+  ingredientNames: [],
+})
 const createCookwareRow = () => ''
+
+const getIngredientKey = (ingredient: Pick<RecipeIngredient, 'id' | 'normalized_name'>): string =>
+  ingredient.id != null ? `id:${ingredient.id}` : `name:${ingredient.normalized_name}`
 
 const getGroceryKey = (item: Pick<GroceryItem, 'name' | 'unit'>): string => {
   const normalizedName = normalizeDisplayName(item.name)
@@ -465,6 +488,57 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'grocery', label: 'Groceries' },
 ]
 
+type IngredientStepPickerProps = {
+  ingredients: RecipeIngredient[]
+  step: InstructionStep
+  onToggle: (ingredient: RecipeIngredient) => void
+  label: string
+}
+
+function IngredientStepPicker({ ingredients, step, onToggle, label }: IngredientStepPickerProps) {
+  const selectedIngredientIds = new Set(step.ingredientIds)
+  const selectedIngredientNames = new Set(step.ingredientNames.map(normalizeDisplayName))
+  const selectedIngredients = ingredients.filter((ingredient) =>
+    ingredient.id != null
+      ? selectedIngredientIds.has(ingredient.id)
+      : selectedIngredientNames.has(ingredient.normalized_name)
+  )
+
+  return (
+    <div className="ingredient-step-picker" aria-label={`${label} ingredients`}>
+      <div className="ingredient-step-picker-label">
+        <span>Ingredients in this step</span>
+        <span>{selectedIngredients.length === 1 ? '1 linked' : `${selectedIngredients.length} linked`}</span>
+      </div>
+      <div className="ingredient-step-picker-list" role="list">
+        {ingredients.length ? (
+          ingredients.map((ingredient, index) => {
+            const key = `${getIngredientKey(ingredient)}:${index}`
+            const selected = ingredient.id != null
+              ? selectedIngredientIds.has(ingredient.id)
+              : selectedIngredientNames.has(ingredient.normalized_name)
+            return (
+              <button
+                type="button"
+                key={key}
+                className={`ingredient-step-chip${selected ? ' selected' : ''}`}
+                aria-pressed={selected}
+                title={`Link ${ingredient.display_name} to this step`}
+                onClick={() => onToggle(ingredient)}
+              >
+                {ingredient.display_name}
+                {selected ? <span aria-hidden="true">✓</span> : null}
+              </button>
+            )
+          })
+        ) : (
+          <span className="ingredient-step-picker-empty">Add an ingredient above to link it here.</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     const saved = readStorage<string>(STORAGE_KEYS.activeTab, 'recipes')
@@ -494,10 +568,10 @@ function App() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
   const [clearGroceriesConfirm, setClearGroceriesConfirm] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<any>(null)
-  const [uploadIngredientRows, setUploadIngredientRows] = useState<Array<{ name: string; quantity: string; unit: string }>>([
+  const [uploadIngredientRows, setUploadIngredientRows] = useState<IngredientEditorRow[]>([
     createIngredientRow(),
   ])
-  const [uploadInstructionRows, setUploadInstructionRows] = useState<string[]>([createInstructionStep()])
+  const [uploadInstructionRows, setUploadInstructionRows] = useState<InstructionStep[]>([createInstructionStep()])
   const [uploadCookwareRows, setUploadCookwareRows] = useState<string[]>([createCookwareRow()])
   const [uploadImageUrl, setUploadImageUrl] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -505,12 +579,13 @@ function App() {
   const [pendingImportFiles, setPendingImportFiles] = useState<File[]>([])
   const [expandedUploadInstructionIndex, setExpandedUploadInstructionIndex] = useState<number | null>(null)
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
-  const [editIngredientRows, setEditIngredientRows] = useState<Array<{ name: string; quantity: string; unit: string }>>([
+  const [editIngredientRows, setEditIngredientRows] = useState<IngredientEditorRow[]>([
     createIngredientRow(),
   ])
-  const [editInstructionRows, setEditInstructionRows] = useState<string[]>([createInstructionStep()])
+  const [editInstructionRows, setEditInstructionRows] = useState<InstructionStep[]>([createInstructionStep()])
   const [editCookwareRows, setEditCookwareRows] = useState<string[]>([createCookwareRow()])
   const [expandedEditInstructionIndex, setExpandedEditInstructionIndex] = useState<number | null>(null)
+  const [savingRecipe, setSavingRecipe] = useState(false)
 
   const updateIngredientRow = (
     setter: React.Dispatch<React.SetStateAction<Array<{ name: string; quantity: string; unit: string }>>>,
@@ -530,28 +605,85 @@ function App() {
   }
 
   const removeIngredientRow = (
-    setter: React.Dispatch<React.SetStateAction<Array<{ name: string; quantity: string; unit: string }>>>,
-    index: number
+    setter: React.Dispatch<React.SetStateAction<IngredientEditorRow[]>>,
+    index: number,
+    linkedInstructionSetter?: React.Dispatch<React.SetStateAction<InstructionStep[]>>
   ) => {
     setter((current) => {
+      const removedRow = current[index]
       if (current.length === 1) {
         return [createIngredientRow()]
       }
+
+      if (linkedInstructionSetter && removedRow) {
+        linkedInstructionSetter((steps) =>
+          steps.map((step) => {
+            const ingredientIds = removedRow.id != null
+              ? step.ingredientIds.filter((id) => id !== removedRow.id)
+              : step.ingredientIds
+            const ingredientNames = removedRow.name.trim()
+              ? step.ingredientNames.filter((name) => normalizeDisplayName(name) !== normalizeDisplayName(removedRow.name))
+              : step.ingredientNames
+            return { ...step, ingredientIds, ingredientNames }
+          })
+        )
+      }
+
       return current.filter((_, rowIndex) => rowIndex !== index)
     })
   }
 
-  const addInstructionStep = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+  const addInstructionStep = (setter: React.Dispatch<React.SetStateAction<InstructionStep[]>>) => {
     setter((current) => [...current, createInstructionStep()])
   }
 
-  const removeInstructionStep = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+  const removeInstructionStep = (setter: React.Dispatch<React.SetStateAction<InstructionStep[]>>, index: number) => {
     setter((current) => {
       if (current.length === 1) {
         return [createInstructionStep()]
       }
       return current.filter((_, rowIndex) => rowIndex !== index)
     })
+  }
+
+  const toggleInstructionIngredient = (
+    setter: React.Dispatch<React.SetStateAction<InstructionStep[]>>,
+    instructionIndex: number,
+    ingredient: RecipeIngredient
+  ) => {
+    setter((current) =>
+      current.map((step, index) => {
+        if (index !== instructionIndex) return step
+
+        const isIdLink = ingredient.id != null
+        const ingredientId = ingredient.id
+        const isSelected = isIdLink
+          ? ingredientId !== undefined && step.ingredientIds.includes(ingredientId)
+          : step.ingredientNames.some((name) => normalizeDisplayName(name) === ingredient.normalized_name)
+
+        if (isSelected) {
+          return {
+            ...step,
+            ingredientIds: isIdLink && ingredientId !== undefined
+              ? step.ingredientIds.filter((id) => id !== ingredientId)
+              : step.ingredientIds,
+            ingredientNames: !isIdLink
+              ? step.ingredientNames.filter((name) => normalizeDisplayName(name) !== ingredient.normalized_name)
+              : step.ingredientNames,
+          }
+        }
+
+        return {
+          ...step,
+          ingredientIds: isIdLink && ingredientId !== undefined
+            ? [...step.ingredientIds, ingredientId]
+            : step.ingredientIds,
+          ingredientNames: !isIdLink
+            ? [...step.ingredientNames, ingredient.display_name]
+            : step.ingredientNames,
+        }
+      })
+    )
   }
 
   const addCookwareRow = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
@@ -568,7 +700,7 @@ function App() {
   }
 
   const moveInstructionStep = (
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    setter: React.Dispatch<React.SetStateAction<InstructionStep[]>>,
     index: number,
     direction: -1 | 1
   ) => {
@@ -601,6 +733,7 @@ function App() {
       keywords: Array.isArray(item.keywords) ? item.keywords : [],
       ingredients: Array.isArray(item.ingredients)
         ? item.ingredients.map((ingredient: any) => ({
+            id: Number.isInteger(ingredient.id) ? Number(ingredient.id) : undefined,
             display_name: ingredient.display_name || ingredient.normalized_name || 'Ingredient',
             normalized_name: ingredient.normalized_name || ingredient.display_name || 'ingredient',
             quantity: Number(ingredient.quantity ?? 1),
@@ -611,10 +744,31 @@ function App() {
         : [],
       instructions: Array.isArray(item.instructions)
         ? item.instructions
-            .map((instruction: any, index: number) => ({
-              step_number: Number(instruction.step_number ?? index + 1),
-              instruction: String(instruction.instruction ?? '').trim(),
-            }))
+            .map((instruction: any, index: number) => {
+              const ingredientIds: number[] = Array.isArray(instruction.ingredient_ids)
+                ? instruction.ingredient_ids.filter((id: unknown): id is number => Number.isInteger(id))
+                : []
+              const ingredientNames = Array.isArray(instruction.ingredient_names)
+                ? instruction.ingredient_names.map((name: unknown) => String(name).trim()).filter(Boolean)
+                : []
+              const ingredientNameById = new Map<number, string>()
+              item.ingredients
+                .filter((ingredient: any) => Number.isInteger(ingredient.id))
+                .forEach((ingredient: any) => {
+                  ingredientNameById.set(Number(ingredient.id), String(ingredient.display_name || ingredient.normalized_name || '').trim())
+                })
+
+              return {
+                step_number: Number(instruction.step_number ?? index + 1),
+                instruction: String(instruction.instruction ?? '').trim(),
+                ingredient_ids: ingredientIds,
+                ingredient_names: ingredientNames.length
+                  ? ingredientNames
+                  : ingredientIds
+                      .map((id: number): string | undefined => ingredientNameById.get(id))
+                      .filter((name): name is string => Boolean(name)),
+              }
+            })
             .filter((instruction: { instruction: string }) => instruction.instruction)
         : [],
       tools: Array.isArray(item.tools)
@@ -980,7 +1134,11 @@ function App() {
       : [createIngredientRow()]
 
     const nextInstructions = imported.instructions.length
-      ? imported.instructions.map((instruction) => instruction.instruction)
+      ? imported.instructions.map((instruction) => ({
+          instruction: instruction.instruction,
+          ingredientIds: [],
+          ingredientNames: instruction.ingredient_names ?? [],
+        }))
       : [createInstructionStep()]
     const nextTools = imported.tools.length ? imported.tools : [createCookwareRow()]
 
@@ -1094,12 +1252,19 @@ function App() {
         return makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit)
       })
     const parsedInstructions = uploadInstructionRows
-      .map((step) => step.trim())
-      .filter(Boolean)
-      .map((instruction, index) => ({
-        step_number: index + 1,
-        instruction,
+      .map((step) => ({
+        instruction: step.instruction.trim(),
+        ingredientNames: step.ingredientNames,
       }))
+      .filter((step) => step.instruction)
+      .map((step, index) => {
+        const ingredientNames = [...step.ingredientNames]
+        return {
+          step_number: index + 1,
+          instruction: step.instruction,
+          ingredient_names: ingredientNames,
+        }
+      })
     const parsedTools = uploadCookwareRows.map((tool) => tool.trim()).filter(Boolean)
 
     if (!title || parsedIngredients.length === 0) {
@@ -1199,6 +1364,7 @@ function App() {
       setEditIngredientRows(
         selectedRecipe.ingredients.length
           ? selectedRecipe.ingredients.map((ingredient) => ({
+              id: ingredient.id,
               name: ingredient.display_name,
               quantity: String(ingredient.quantity),
               unit: ingredient.unit && ingredient.unit.toLowerCase() !== 'item' ? ingredient.unit : '',
@@ -1207,7 +1373,13 @@ function App() {
       )
       setEditInstructionRows(
         selectedRecipe.instructions.length
-          ? selectedRecipe.instructions.map((instruction) => instruction.instruction)
+          ? selectedRecipe.instructions.map((instruction) => ({
+              instruction: instruction.instruction,
+              ingredientIds: instruction.ingredient_ids ?? [],
+              ingredientNames: instruction.ingredient_ids?.length
+                ? []
+                : instruction.ingredient_names ?? [],
+            }))
           : [createInstructionStep()]
       )
       setEditCookwareRows(
@@ -1224,9 +1396,11 @@ function App() {
     const formData = new FormData(event.currentTarget)
     const id = editingRecipeId ?? selectedRecipeId
 
-    if (id === null) {
+    if (id === null || savingRecipe) {
       return
     }
+
+    setSavingRecipe(true)
 
     const title = String(formData.get('title') || '').trim()
     const description = String(formData.get('description') || '').trim() || 'Custom recipe'
@@ -1245,18 +1419,38 @@ function App() {
         const quantity = Number(row.quantity)
         const normalizedQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1
         const normalizedUnit = normalizeIngredientUnit(row.unit)
-        return makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit)
+        return {
+          ...makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit),
+          id: row.id,
+        }
       })
     const instructionSteps = editInstructionRows
-      .map((step) => step.trim())
-      .filter(Boolean)
-      .map((instruction, index) => ({
-        step_number: index + 1,
-        instruction,
+      .map((step) => ({
+        instruction: step.instruction.trim(),
+        ingredientNames: step.ingredientNames,
+        ingredientIds: step.ingredientIds,
       }))
+      .filter((step) => step.instruction)
+      .map((step, index) => {
+        const ingredientNames = step.ingredientIds.length
+          ? step.ingredientIds
+              .map((id) => {
+                const ingredient = ingredients.find((item) => item.id === id)
+                return ingredient?.display_name
+              })
+              .filter((name): name is string => Boolean(name))
+          : step.ingredientNames
+        return {
+          step_number: index + 1,
+          instruction: step.instruction,
+          ingredient_ids: step.ingredientIds,
+          ingredient_names: ingredientNames,
+        }
+      })
     const cookware = editCookwareRows.map((tool) => tool.trim()).filter(Boolean)
 
     if (!title || ingredients.length === 0) {
+      setSavingRecipe(false)
       return
     }
 
@@ -1287,11 +1481,11 @@ function App() {
       nutrition,
     }
 
-    setRecipes((current) => current.map((recipe) => (recipe.id === id ? patch : recipe)))
-    setSelectedRecipeId(id)
-    setEditingRecipeId(null)
-
     if (!online) {
+      setRecipes((current) => current.map((recipe) => (recipe.id === id ? patch : recipe)))
+      setSelectedRecipeId(id)
+      setEditingRecipeId(null)
+      setSavingRecipe(false)
       return
     }
 
@@ -1306,6 +1500,7 @@ function App() {
       keywords: patch.keywords,
       tools: cookware,
       ingredients: ingredients.map((ingredient) => ({
+        id: ingredient.id ?? null,
         display_name: ingredient.display_name,
         normalized_name: ingredient.normalized_name,
         quantity: ingredient.quantity,
@@ -1324,12 +1519,19 @@ function App() {
         body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
-        const updated = await response.json()
-        setRecipes((current) => current.map((recipe) => (recipe.id === id ? normalizeRecipe(updated) : recipe)))
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null)
+        throw new Error(errorPayload?.detail || `Save failed with status ${response.status}`)
       }
-    } catch {
-      // Keep local edits when the server is unavailable.
+
+      const updated = await response.json()
+      setRecipes((current) => current.map((recipe) => (recipe.id === id ? normalizeRecipe(updated) : recipe)))
+      setSelectedRecipeId(id)
+      setEditingRecipeId(null)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Unable to save this recipe.')
+    } finally {
+      setSavingRecipe(false)
     }
   }
 
@@ -1456,11 +1658,26 @@ function App() {
                 <div className="detail-section">
                   <h3>Instructions</h3>
                   <ol className="instruction-list">
-                    {selectedRecipe.instructions.map((instruction) => (
-                      <li key={`${selectedRecipe.id}-instruction-${instruction.step_number}`}>
-                        {instruction.instruction}
-                      </li>
-                    ))}
+                    {selectedRecipe.instructions.map((instruction) => {
+                      const linkedIngredients = instruction.ingredient_names?.length
+                        ? instruction.ingredient_names
+                        : instruction.ingredient_ids
+                            ?.map((ingredientId) =>
+                              selectedRecipe.ingredients.find((ingredient) => ingredient.id === ingredientId)?.display_name
+                            )
+                            .filter((name): name is string => Boolean(name)) ?? []
+
+                      return (
+                        <li key={`${selectedRecipe.id}-instruction-${instruction.step_number}`}>
+                          <span>{instruction.instruction}</span>
+                          {linkedIngredients.length > 0 ? (
+                            <span className="instruction-ingredients">
+                              Ingredients: {linkedIngredients.join(', ')}
+                            </span>
+                          ) : null}
+                        </li>
+                      )
+                    })}
                   </ol>
                 </div>
               )}
@@ -1550,7 +1767,7 @@ function App() {
                         onChange={(event) => updateIngredientRow(setEditIngredientRows, index, 'unit', event.target.value)}
                       />
                       {editIngredientRows.length > 1 ? (
-                        <button type="button" className="icon-button" aria-label="Remove ingredient" onClick={() => removeIngredientRow(setEditIngredientRows, index)}>
+                        <button type="button" className="icon-button" aria-label="Remove ingredient" onClick={() => removeIngredientRow(setEditIngredientRows, index, setEditInstructionRows)}>
                           X
                         </button>
                       ) : null}
@@ -1591,19 +1808,33 @@ function App() {
                   {editInstructionRows.map((step, index) => (
                     <div key={`edit-instruction-${index}`} className="ingredient-row instruction-row">
                       <span className="instruction-step-number">{index + 1}.</span>
-                      <textarea
-                        className="ingredient-field ingredient-field--name instruction-text-area"
-                        value={step}
-                        placeholder="Add a cooking step"
-                        rows={expandedEditInstructionIndex === index ? 3 : 1}
-                        onFocus={() => setExpandedEditInstructionIndex(index)}
-                        onBlur={() => setExpandedEditInstructionIndex((current) => (current === index ? null : current))}
-                        onChange={(event) => {
-                          const next = [...editInstructionRows]
-                          next[index] = event.target.value
-                          setEditInstructionRows(next)
-                        }}
-                      />
+                      <div className="instruction-entry">
+                        <textarea
+                          className="ingredient-field ingredient-field--name instruction-text-area"
+                          value={step.instruction}
+                          placeholder="Add a cooking step"
+                          rows={expandedEditInstructionIndex === index ? 3 : 1}
+                          onFocus={() => setExpandedEditInstructionIndex(index)}
+                          onBlur={() => setExpandedEditInstructionIndex((current) => (current === index ? null : current))}
+                          onChange={(event) => {
+                            const next = [...editInstructionRows]
+                            next[index] = { ...next[index], instruction: event.target.value }
+                            setEditInstructionRows(next)
+                          }}
+                        />
+                        <IngredientStepPicker
+                          ingredients={editIngredientRows.map((row) => ({
+                            id: row.id,
+                            display_name: row.name || 'Untitled ingredient',
+                            normalized_name: normalizeDisplayName(row.name),
+                            quantity: Number(row.quantity) || 1,
+                            unit: row.unit,
+                          }))}
+                          step={step}
+                          label={`Step ${index + 1}`}
+                          onToggle={(ingredient) => toggleInstructionIngredient(setEditInstructionRows, index, ingredient)}
+                        />
+                      </div>
                       {editInstructionRows.length > 1 ? (
                         <div className="instruction-actions">
                           <button
@@ -1664,8 +1895,8 @@ function App() {
                   Nutrition notes
                   <input name="nutritionNotes" type="text" defaultValue={selectedRecipe.nutrition?.notes ?? ''} />
                 </label>
-                <button type="submit" className="primary-button wide-button">
-                  Save Changes
+                <button type="submit" className="primary-button wide-button" disabled={savingRecipe}>
+                  {savingRecipe ? 'Saving…' : 'Save Changes'}
                 </button>
               </form>
             </section>
@@ -1691,7 +1922,7 @@ function App() {
               <input
                 ref={importFileInputRef}
                 type="file"
-                accept=".txt,.md,.json,.csv,.yaml,.yml,.html,.htm,.rtf,image/*"
+                accept=".txt,.md,.json,.csv,.yaml,.yml,.html,.htm,.pdf,.doc,.docx,.rtf,.heic,.hevc,.heif,.png,.jpg,.jpeg,application/msword,application/pdf"
                 multiple
                 hidden
                 onChange={(event) => void handleImportRecipeFile(event)}
@@ -1819,7 +2050,7 @@ function App() {
                         onChange={(event) => updateIngredientRow(setUploadIngredientRows, index, 'unit', event.target.value)}
                       />
                       {uploadIngredientRows.length > 1 ? (
-                        <button type="button" className="icon-button" aria-label="Remove ingredient" onClick={() => removeIngredientRow(setUploadIngredientRows, index)}>
+                        <button type="button" className="icon-button" aria-label="Remove ingredient" onClick={() => removeIngredientRow(setUploadIngredientRows, index, setUploadInstructionRows)}>
                           X
                         </button>
                       ) : null}
@@ -1860,19 +2091,32 @@ function App() {
                   {uploadInstructionRows.map((step, index) => (
                     <div key={`upload-instruction-${index}`} className="ingredient-row instruction-row">
                       <span className="instruction-step-number">{index + 1}.</span>
-                      <textarea
-                        className="ingredient-field ingredient-field--name instruction-text-area"
-                        value={step}
-                        placeholder="Add a cooking step"
-                        rows={expandedUploadInstructionIndex === index ? 3 : 1}
-                        onFocus={() => setExpandedUploadInstructionIndex(index)}
-                        onBlur={() => setExpandedUploadInstructionIndex((current) => (current === index ? null : current))}
-                        onChange={(event) => {
-                          const next = [...uploadInstructionRows]
-                          next[index] = event.target.value
-                          setUploadInstructionRows(next)
-                        }}
-                      />
+                      <div className="instruction-entry">
+                        <textarea
+                          className="ingredient-field ingredient-field--name instruction-text-area"
+                          value={step.instruction}
+                          placeholder="Add a cooking step"
+                          rows={expandedUploadInstructionIndex === index ? 3 : 1}
+                          onFocus={() => setExpandedUploadInstructionIndex(index)}
+                          onBlur={() => setExpandedUploadInstructionIndex((current) => (current === index ? null : current))}
+                          onChange={(event) => {
+                            const next = [...uploadInstructionRows]
+                            next[index] = { ...next[index], instruction: event.target.value }
+                            setUploadInstructionRows(next)
+                          }}
+                        />
+                        <IngredientStepPicker
+                          ingredients={uploadIngredientRows.map((row) => ({
+                            display_name: row.name || 'Untitled ingredient',
+                            normalized_name: normalizeDisplayName(row.name),
+                            quantity: Number(row.quantity) || 1,
+                            unit: row.unit,
+                          }))}
+                          step={step}
+                          label={`Step ${index + 1}`}
+                          onToggle={(ingredient) => toggleInstructionIngredient(setUploadInstructionRows, index, ingredient)}
+                        />
+                      </div>
                       {uploadInstructionRows.length > 1 ? (
                         <div className="instruction-actions">
                           <button

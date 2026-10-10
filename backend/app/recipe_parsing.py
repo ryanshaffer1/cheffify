@@ -585,20 +585,30 @@ def parse_recipe(extracted_text: str) -> dict[str, object]:
         if line
         and not re.match(r"^(?:ingredients?|ingredient list)\b", line, re.IGNORECASE)
     ]
-    ingredient_names = {
+    ingredient_names = [
         str(ingredient["normalized_name"]) for ingredient in ingredients
-    }
-    instructions = [
-        {
-            "step_number": index,
-            "instruction": re.sub(r"^\d+[.)]\s*", "", _clean_instruction(line)),
-        }
-        for index, line in enumerate(
-            _split_instructions(sections["instructions"], ingredient_names),
-            start=1,
-        )
-        if _clean_instruction(line)
     ]
+    instruction_lines = _split_instructions(
+        sections["instructions"], set(ingredient_names)
+    )
+    instructions = []
+    for index, line in enumerate(instruction_lines, start=1):
+        instruction = re.sub(r"^\d+[.)]\s*", "", _clean_instruction(line))
+        linked_ingredient_names = []
+        for ingredient_name in ingredient_names:
+            if re.search(
+                rf"(?<![a-z0-9]){re.escape(ingredient_name)}(?![a-z0-9])",
+                instruction,
+                re.IGNORECASE,
+            ):
+                linked_ingredient_names.append(ingredient_name)
+        instructions.append(
+            {
+                "step_number": index,
+                "instruction": instruction,
+                "ingredient_names": linked_ingredient_names,
+            }
+        )
     tools = [_clean_line(line) for line in sections["tools"] if _clean_line(line)]
 
     return {

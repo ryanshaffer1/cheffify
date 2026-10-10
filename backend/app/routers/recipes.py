@@ -33,6 +33,71 @@ def get_db():
         db.close()
 
 
+def _recipe_to_read(recipe: Recipe) -> RecipeRead:
+    ingredients = [
+        {
+            "id": ingredient.id,
+            "display_name": ingredient.display_name,
+            "normalized_name": ingredient.normalized_name,
+            "quantity": float(ingredient.quantity),
+            "unit": ingredient.unit,
+            "is_optional": ingredient.is_optional,
+            "notes": ingredient.notes,
+        }
+        for ingredient in sorted(recipe.ingredients, key=lambda item: item.sort_order)
+    ]
+    instructions = [
+        {
+            "step_number": step.step_number,
+            "instruction": step.instruction,
+            "ingredient_ids": [
+                ingredient.id
+                for ingredient in sorted(
+                    step.ingredients, key=lambda item: item.sort_order
+                )
+            ],
+            "ingredient_names": [],
+        }
+        for step in sorted(recipe.instructions, key=lambda item: item.step_number)
+    ]
+    return RecipeRead(
+        id=recipe.id,
+        title=recipe.title,
+        description=recipe.description,
+        default_servings=recipe.default_servings,
+        servings_min=recipe.servings_min,
+        servings_max=recipe.servings_max,
+        image_url=recipe.image_url,
+        source_type=recipe.source_type,
+        keywords=[keyword.keyword for keyword in recipe.keywords],
+        tools=[tool.name for tool in recipe.tools],
+        ingredients=ingredients,
+        instructions=instructions,
+        nutrition=(
+            {
+                "calories": float(recipe.nutrition.calories)
+                if recipe.nutrition and recipe.nutrition.calories is not None
+                else None,
+                "protein_g": float(recipe.nutrition.protein_g)
+                if recipe.nutrition and recipe.nutrition.protein_g is not None
+                else None,
+                "carbs_g": float(recipe.nutrition.carbs_g)
+                if recipe.nutrition and recipe.nutrition.carbs_g is not None
+                else None,
+                "fat_g": float(recipe.nutrition.fat_g)
+                if recipe.nutrition and recipe.nutrition.fat_g is not None
+                else None,
+                "fiber_g": float(recipe.nutrition.fiber_g)
+                if recipe.nutrition and recipe.nutrition.fiber_g is not None
+                else None,
+                "notes": recipe.nutrition.notes if recipe.nutrition else None,
+            }
+            if recipe.nutrition
+            else None
+        ),
+    )
+
+
 @router.post("/upload-image")
 def upload_recipe_image(file: UploadFile = File(...)) -> dict[str, str]:
     if not file.filename:
@@ -87,60 +152,7 @@ def import_recipe_text(
 @router.get("", response_model=list[RecipeRead])
 def list_recipes(db: Session = Depends(get_db)) -> list[RecipeRead]:
     recipes = db.query(Recipe).all()
-    result = []
-    for recipe in recipes:
-        result.append(
-            RecipeRead(
-                id=recipe.id,
-                title=recipe.title,
-                description=recipe.description,
-                default_servings=recipe.default_servings,
-                servings_min=recipe.servings_min,
-                servings_max=recipe.servings_max,
-                image_url=recipe.image_url,
-                source_type=recipe.source_type,
-                keywords=[k.keyword for k in recipe.keywords],
-                tools=[t.name for t in recipe.tools],
-                ingredients=[
-                    {
-                        "display_name": i.display_name,
-                        "normalized_name": i.normalized_name,
-                        "quantity": float(i.quantity),
-                        "unit": i.unit,
-                        "is_optional": i.is_optional,
-                        "notes": i.notes,
-                    }
-                    for i in recipe.ingredients
-                ],
-                instructions=[
-                    {"step_number": step.step_number, "instruction": step.instruction}
-                    for step in recipe.instructions
-                ],
-                nutrition=(
-                    {
-                        "calories": float(recipe.nutrition.calories)
-                        if recipe.nutrition and recipe.nutrition.calories is not None
-                        else None,
-                        "protein_g": float(recipe.nutrition.protein_g)
-                        if recipe.nutrition and recipe.nutrition.protein_g is not None
-                        else None,
-                        "carbs_g": float(recipe.nutrition.carbs_g)
-                        if recipe.nutrition and recipe.nutrition.carbs_g is not None
-                        else None,
-                        "fat_g": float(recipe.nutrition.fat_g)
-                        if recipe.nutrition and recipe.nutrition.fat_g is not None
-                        else None,
-                        "fiber_g": float(recipe.nutrition.fiber_g)
-                        if recipe.nutrition and recipe.nutrition.fiber_g is not None
-                        else None,
-                        "notes": recipe.nutrition.notes if recipe.nutrition else None,
-                    }
-                    if recipe.nutrition
-                    else None
-                ),
-            )
-        )
-    return result
+    return [_recipe_to_read(recipe) for recipe in recipes]
 
 
 @router.get("/{recipe_id}", response_model=RecipeRead)
@@ -151,55 +163,7 @@ def get_recipe(recipe_id: int, db: Session = Depends(get_db)) -> RecipeRead:
             status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found"
         )
 
-    return RecipeRead(
-        id=recipe.id,
-        title=recipe.title,
-        description=recipe.description,
-        default_servings=recipe.default_servings,
-        servings_min=recipe.servings_min,
-        servings_max=recipe.servings_max,
-        image_url=recipe.image_url,
-        source_type=recipe.source_type,
-        keywords=[k.keyword for k in recipe.keywords],
-        tools=[t.name for t in recipe.tools],
-        ingredients=[
-            {
-                "display_name": i.display_name,
-                "normalized_name": i.normalized_name,
-                "quantity": float(i.quantity),
-                "unit": i.unit,
-                "is_optional": i.is_optional,
-                "notes": i.notes,
-            }
-            for i in recipe.ingredients
-        ],
-        instructions=[
-            {"step_number": step.step_number, "instruction": step.instruction}
-            for step in recipe.instructions
-        ],
-        nutrition=(
-            {
-                "calories": float(recipe.nutrition.calories)
-                if recipe.nutrition and recipe.nutrition.calories is not None
-                else None,
-                "protein_g": float(recipe.nutrition.protein_g)
-                if recipe.nutrition and recipe.nutrition.protein_g is not None
-                else None,
-                "carbs_g": float(recipe.nutrition.carbs_g)
-                if recipe.nutrition and recipe.nutrition.carbs_g is not None
-                else None,
-                "fat_g": float(recipe.nutrition.fat_g)
-                if recipe.nutrition and recipe.nutrition.fat_g is not None
-                else None,
-                "fiber_g": float(recipe.nutrition.fiber_g)
-                if recipe.nutrition and recipe.nutrition.fiber_g is not None
-                else None,
-                "notes": recipe.nutrition.notes if recipe.nutrition else None,
-            }
-            if recipe.nutrition
-            else None
-        ),
-    )
+    return _recipe_to_read(recipe)
 
 
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
@@ -223,28 +187,38 @@ def create_recipe(payload: RecipeCreate, db: Session = Depends(get_db)) -> Recip
     for tool_name in payload.tools:
         db.add(RecipeTool(recipe_id=recipe.id, name=tool_name))
 
+    persisted_ingredients: list[RecipeIngredient] = []
     for ingredient in payload.ingredients:
-        db.add(
-            RecipeIngredient(
-                recipe_id=recipe.id,
-                display_name=ingredient.display_name,
-                normalized_name=ingredient.normalized_name,
-                quantity=ingredient.quantity,
-                unit=ingredient.unit,
-                is_optional=ingredient.is_optional,
-                notes=ingredient.notes,
-                sort_order=0,
-            )
+        persisted_ingredient = RecipeIngredient(
+            recipe_id=recipe.id,
+            display_name=ingredient.display_name,
+            normalized_name=ingredient.normalized_name,
+            quantity=ingredient.quantity,
+            unit=ingredient.unit,
+            is_optional=ingredient.is_optional,
+            notes=ingredient.notes,
+            sort_order=0,
         )
+        db.add(persisted_ingredient)
+        persisted_ingredients.append(persisted_ingredient)
+    db.flush()
 
+    ingredient_by_name = {
+        ingredient.normalized_name.casefold(): ingredient
+        for ingredient in persisted_ingredients
+    }
     for instruction in payload.instructions:
-        db.add(
-            RecipeInstruction(
-                recipe_id=recipe.id,
-                step_number=instruction.step_number,
-                instruction=instruction.instruction,
-            )
+        persisted_instruction = RecipeInstruction(
+            recipe_id=recipe.id,
+            step_number=instruction.step_number,
+            instruction=instruction.instruction,
         )
+        db.add(persisted_instruction)
+        db.flush()
+        for ingredient_name in instruction.ingredient_names:
+            ingredient = ingredient_by_name.get(ingredient_name.casefold())
+            if ingredient is not None:
+                persisted_instruction.ingredients.append(ingredient)
 
     if payload.nutrition:
         db.add(
@@ -282,55 +256,128 @@ def update_recipe(
     recipe.image_url = payload.image_url
     recipe.source_type = payload.source_type
 
-    db.query(RecipeKeyword).filter(RecipeKeyword.recipe_id == recipe.id).delete()
-    db.query(RecipeTool).filter(RecipeTool.recipe_id == recipe.id).delete()
-    db.query(RecipeIngredient).filter(RecipeIngredient.recipe_id == recipe.id).delete()
-    db.query(RecipeInstruction).filter(
-        RecipeInstruction.recipe_id == recipe.id
-    ).delete()
+    for existing_keyword in list(recipe.keywords):
+        db.delete(existing_keyword)
+    for existing_tool in list(recipe.tools):
+        db.delete(existing_tool)
     if recipe.nutrition:
-        db.query(RecipeNutrition).filter(
-            RecipeNutrition.recipe_id == recipe.id
-        ).delete()
+        db.delete(recipe.nutrition)
+    db.flush()
 
     for keyword in payload.keywords:
-        db.add(RecipeKeyword(recipe_id=recipe.id, keyword=keyword))
+        recipe.keywords.append(RecipeKeyword(keyword=keyword))
 
     for tool_name in payload.tools:
-        db.add(RecipeTool(recipe_id=recipe.id, name=tool_name))
+        recipe.tools.append(RecipeTool(name=tool_name))
 
-    seen_ingredients: set[tuple[str, str, int]] = set()
+    existing_ingredients = {
+        ingredient.id: ingredient for ingredient in recipe.ingredients
+    }
+    existing_ingredients_by_name = {
+        (
+            ingredient.normalized_name.casefold(),
+            (ingredient.unit or "").strip().lower(),
+        ): ingredient
+        for ingredient in existing_ingredients.values()
+    }
+    persisted_ingredients: list[RecipeIngredient] = []
+    requested_ingredient_ids: set[int] = set()
+
     for index, ingredient in enumerate(payload.ingredients):
         normalized_name = (
             ingredient.normalized_name or ingredient.display_name or ""
         ).strip()
         unit_value = (ingredient.unit or "").strip().lower()
-        ingredient_key = (normalized_name.lower(), unit_value, index)
-        if ingredient_key in seen_ingredients:
-            continue
-        seen_ingredients.add(ingredient_key)
+        persisted_ingredient = None
 
-        db.add(
-            RecipeIngredient(
-                recipe_id=recipe.id,
-                display_name=ingredient.display_name,
-                normalized_name=normalized_name,
-                quantity=ingredient.quantity,
-                unit=ingredient.unit,
-                is_optional=ingredient.is_optional,
-                notes=ingredient.notes,
-                sort_order=index,
+        if ingredient.id is not None:
+            persisted_ingredient = existing_ingredients.get(ingredient.id)
+            if persisted_ingredient is None:
+                persisted_ingredient = RecipeIngredient(
+                    recipe_id=recipe.id,
+                    display_name=ingredient.display_name,
+                    normalized_name=normalized_name,
+                    quantity=ingredient.quantity,
+                    unit=ingredient.unit,
+                    is_optional=ingredient.is_optional,
+                    notes=ingredient.notes,
+                    sort_order=index,
+                )
+                db.add(persisted_ingredient)
+        else:
+            persisted_ingredient = existing_ingredients_by_name.get(
+                (normalized_name.casefold(), unit_value)
             )
-        )
+            if persisted_ingredient is None:
+                persisted_ingredient = RecipeIngredient(
+                    recipe_id=recipe.id,
+                    display_name=ingredient.display_name,
+                    normalized_name=normalized_name,
+                    quantity=ingredient.quantity,
+                    unit=ingredient.unit,
+                    is_optional=ingredient.is_optional,
+                    notes=ingredient.notes,
+                    sort_order=index,
+                )
+                db.add(persisted_ingredient)
 
-    for instruction in payload.instructions:
-        db.add(
-            RecipeInstruction(
+        persisted_ingredient.display_name = ingredient.display_name
+        persisted_ingredient.normalized_name = normalized_name
+        persisted_ingredient.quantity = ingredient.quantity
+        persisted_ingredient.unit = ingredient.unit
+        persisted_ingredient.is_optional = ingredient.is_optional
+        persisted_ingredient.notes = ingredient.notes
+        persisted_ingredient.sort_order = index
+        persisted_ingredients.append(persisted_ingredient)
+        requested_ingredient_ids.add(persisted_ingredient.id)
+
+    db.flush()
+
+    existing_instructions = sorted(
+        recipe.instructions, key=lambda item: item.step_number
+    )
+    for existing_instruction in existing_instructions:
+        existing_instruction.ingredients.clear()
+    for existing_instruction in existing_instructions[len(payload.instructions) :]:
+        db.delete(existing_instruction)
+
+    ingredient_by_id = {
+        ingredient.id: ingredient for ingredient in persisted_ingredients
+    }
+    ingredient_by_name = {
+        ingredient.normalized_name.casefold(): ingredient
+        for ingredient in persisted_ingredients
+    }
+    for index, instruction in enumerate(payload.instructions):
+        persisted_instruction = (
+            existing_instructions[index]
+            if index < len(existing_instructions)
+            else RecipeInstruction(
                 recipe_id=recipe.id,
                 step_number=instruction.step_number,
                 instruction=instruction.instruction,
             )
         )
+        if persisted_instruction.recipe_id is None:
+            recipe.instructions.append(persisted_instruction)
+        persisted_instruction.instruction = instruction.instruction
+        persisted_instruction.step_number = instruction.step_number
+
+        linked_ingredient_ids = set(instruction.ingredient_ids)
+        for ingredient_name in instruction.ingredient_names:
+            ingredient = ingredient_by_name.get(ingredient_name.casefold())
+            if ingredient is not None:
+                linked_ingredient_ids.add(ingredient.id)
+        for ingredient_id in linked_ingredient_ids:
+            ingredient = ingredient_by_id.get(ingredient_id)
+            if ingredient is not None:
+                persisted_instruction.ingredients.append(ingredient)
+
+    for existing_ingredient in list(recipe.ingredients):
+        if existing_ingredient.id not in requested_ingredient_ids:
+            db.delete(existing_ingredient)
+
+    db.flush()
 
     if payload.nutrition:
         db.add(
@@ -346,6 +393,7 @@ def update_recipe(
         )
 
     db.commit()
+    db.expire(recipe, attribute_names=["instructions", "ingredients"])
     return get_recipe(recipe.id, db)
 
 

@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -32,11 +41,24 @@ class Recipe(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     owner = relationship("User", back_populates="recipes")
-    ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
-    tools = relationship("RecipeTool", back_populates="recipe", cascade="all, delete-orphan")
-    instructions = relationship("RecipeInstruction", back_populates="recipe", cascade="all, delete-orphan")
-    nutrition = relationship("RecipeNutrition", back_populates="recipe", uselist=False, cascade="all, delete-orphan")
-    keywords = relationship("RecipeKeyword", back_populates="recipe", cascade="all, delete-orphan")
+    ingredients = relationship(
+        "RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan"
+    )
+    tools = relationship(
+        "RecipeTool", back_populates="recipe", cascade="all, delete-orphan"
+    )
+    instructions = relationship(
+        "RecipeInstruction", back_populates="recipe", cascade="all, delete-orphan"
+    )
+    nutrition = relationship(
+        "RecipeNutrition",
+        back_populates="recipe",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    keywords = relationship(
+        "RecipeKeyword", back_populates="recipe", cascade="all, delete-orphan"
+    )
 
 
 class RecipeKeyword(Base):
@@ -77,8 +99,15 @@ class RecipeIngredient(Base):
     sort_order = Column(Integer, nullable=False, default=0)
 
     recipe = relationship("Recipe", back_populates="ingredients")
+    instructions = relationship(
+        "RecipeInstruction",
+        secondary="recipe_instruction_ingredients",
+        back_populates="ingredients",
+    )
 
-    __table_args__ = (UniqueConstraint("recipe_id", "normalized_name", "unit", "sort_order"),)
+    __table_args__ = (
+        UniqueConstraint("recipe_id", "normalized_name", "unit", "sort_order"),
+    )
 
 
 class RecipeInstruction(Base):
@@ -90,8 +119,29 @@ class RecipeInstruction(Base):
     instruction = Column(Text, nullable=False)
 
     recipe = relationship("Recipe", back_populates="instructions")
+    ingredients = relationship(
+        "RecipeIngredient",
+        secondary="recipe_instruction_ingredients",
+        back_populates="instructions",
+    )
 
     __table_args__ = (UniqueConstraint("recipe_id", "step_number"),)
+
+
+class RecipeInstructionIngredient(Base):
+    __tablename__ = "recipe_instruction_ingredients"
+
+    instruction_id = Column(
+        Integer, ForeignKey("recipe_instructions.id"), primary_key=True, nullable=False
+    )
+    ingredient_id = Column(
+        Integer, ForeignKey("recipe_ingredients.id"), primary_key=True, nullable=False
+    )
+
+    instruction = relationship("RecipeInstruction", viewonly=True)
+    ingredient = relationship("RecipeIngredient", viewonly=True)
+
+    __table_args__ = (UniqueConstraint("instruction_id", "ingredient_id"),)
 
 
 class RecipeNutrition(Base):
@@ -117,7 +167,9 @@ class MealPlan(Base):
     name = Column(String(255), nullable=False)
 
     owner = relationship("User", back_populates="meal_plans")
-    recipe_links = relationship("MealPlanRecipe", back_populates="meal_plan", cascade="all, delete-orphan")
+    recipe_links = relationship(
+        "MealPlanRecipe", back_populates="meal_plan", cascade="all, delete-orphan"
+    )
 
 
 class MealPlanRecipe(Base):
@@ -144,7 +196,9 @@ class GroceryList(Base):
     name = Column(String(255), nullable=False, default="Groceries")
 
     owner = relationship("User", back_populates="grocery_lists")
-    items = relationship("GroceryListItem", back_populates="grocery_list", cascade="all, delete-orphan")
+    items = relationship(
+        "GroceryListItem", back_populates="grocery_list", cascade="all, delete-orphan"
+    )
 
 
 class GroceryListItem(Base):
@@ -163,14 +217,20 @@ class GroceryListItem(Base):
 
     grocery_list = relationship("GroceryList", back_populates="items")
     source_recipe = relationship("Recipe")
-    sources = relationship("GroceryItemSource", back_populates="grocery_list_item", cascade="all, delete-orphan")
+    sources = relationship(
+        "GroceryItemSource",
+        back_populates="grocery_list_item",
+        cascade="all, delete-orphan",
+    )
 
 
 class GroceryItemSource(Base):
     __tablename__ = "grocery_item_sources"
 
     id = Column(Integer, primary_key=True, index=True)
-    grocery_list_item_id = Column(Integer, ForeignKey("grocery_list_items.id"), nullable=False)
+    grocery_list_item_id = Column(
+        Integer, ForeignKey("grocery_list_items.id"), nullable=False
+    )
     recipe_id = Column(Integer, ForeignKey("recipes.id"), nullable=False)
     recipe_title = Column(String(255), nullable=False)
     quantity = Column(Numeric(10, 3), nullable=False)
