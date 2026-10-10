@@ -53,6 +53,7 @@ export type Recipe = {
   servingsMin: number | null
   servingsMax: number | null
   imageUrl?: string | null
+  source?: string | null
   keywords: string[]
   ingredients: RecipeIngredient[]
   instructions: RecipeInstruction[]

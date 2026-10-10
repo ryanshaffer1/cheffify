@@ -61,6 +61,7 @@ export function RecipeDetailPanel({
         <span>{getServingRangeText(recipe)}</span>
         <span>{recipe.keywords.join(', ') || 'custom'}</span>
       </div>
+      {recipe.source ? <p className="recipe-source">Source: {recipe.source}</p> : null}
 
       <div className="detail-section">
         <h3>Ingredients ({defaultServings} Serving{defaultServings !== 1 ? 's' : ''})</h3>

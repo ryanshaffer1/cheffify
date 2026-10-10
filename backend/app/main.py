@@ -5,7 +5,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import engine
-from app.database_migrations import ensure_instruction_ingredient_links
+from app.database_migrations import (
+    ensure_instruction_ingredient_links,
+    ensure_recipe_source_column,
+)
 from app.models import Base
 from app.routers import meal_plans, recipes
 from app.seed import seed_demo_data
@@ -18,6 +21,7 @@ UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
+        ensure_recipe_source_column(connection)
         ensure_instruction_ingredient_links(connection)
     seed_demo_data()
     yield

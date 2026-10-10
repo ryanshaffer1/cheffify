@@ -1,12 +1,20 @@
 from fastapi.testclient import TestClient
 
+from app.database import engine
+from app.database_migrations import ensure_recipe_source_column
 from app.main import app
+from app.models import Base
+
+
+Base.metadata.create_all(bind=engine)
+with engine.begin() as connection:
+    ensure_recipe_source_column(connection)
 
 
 client = TestClient(app)
 
 
-def _create_recipe() -> dict:
+def _create_recipe(source: str | None = None) -> dict:
     response = client.post(
         "/api/recipes",
         json={
@@ -15,6 +23,7 @@ def _create_recipe() -> dict:
             "default_servings": 2,
             "servings_min": 1,
             "servings_max": 4,
+            "source": source,
             "keywords": ["dinner"],
             "tools": [],
             "ingredients": [
@@ -134,3 +143,33 @@ def test_update_adds_new_ingredient_and_links_it_in_same_save() -> None:
         if ingredient["display_name"] in {"Tomato", "Onion", "Cucumber"}
     ]
     assert new_ingredient_id in updated_recipe["instructions"][0]["ingredient_ids"]
+
+
+def test_recipe_source_persists_across_create_update_and_read() -> None:
+    recipe = _create_recipe("Family cookbook, page 42")
+    assert recipe["source"] == "Family cookbook, page 42"
+    recipe_id = recipe["id"]
+
+    create_with_source = client.put(
+        f"/api/recipes/{recipe_id}",
+        json={
+            "title": recipe["title"],
+            "description": recipe["description"],
+            "default_servings": recipe["default_servings"],
+            "servings_min": recipe["servings_min"],
+            "servings_max": recipe["servings_max"],
+            "source": "Grandma's handwritten recipe book",
+            "keywords": recipe["keywords"],
+            "tools": recipe["tools"],
+            "ingredients": recipe["ingredients"],
+            "instructions": recipe["instructions"],
+            "nutrition": None,
+        },
+    )
+
+    assert create_with_source.status_code == 200, create_with_source.text
+    assert create_with_source.json()["source"] == "Grandma's handwritten recipe book"
+
+    fresh_response = client.get(f"/api/recipes/{recipe_id}")
+    assert fresh_response.status_code == 200, fresh_response.text
+    assert fresh_response.json()["source"] == "Grandma's handwritten recipe book"

@@ -14,6 +14,7 @@ export const normalizeRecipe = (item: any): Recipe => {
     servingsMin,
     servingsMax,
     imageUrl: item.image_url ?? item.imageUrl ?? null,
+    source: typeof item.source === 'string' ? item.source : null,
     keywords: Array.isArray(item.keywords) ? item.keywords : [],
     ingredients: Array.isArray(item.ingredients)
       ? item.ingredients.map((ingredient: any) => ({

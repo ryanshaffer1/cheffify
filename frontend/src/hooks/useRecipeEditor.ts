@@ -12,6 +12,7 @@ export const createCookwareRow = (): string => ''
 const fieldsForRecipe = (recipe: Recipe | null): RecipeFormFields => recipe ? ({
   title: recipe.title,
   description: recipe.description,
+  source: recipe.source ?? '',
   keywords: recipe.keywords.join(', '),
   defaultServings: String(recipe.defaultServings ?? recipe.servings ?? 2),
   minServings: String(recipe.servingsMin ?? 1),
@@ -110,6 +111,7 @@ export function useRecipeEditor(selectedRecipe: Recipe | null) {
     setUploadFields({
       title: imported.title,
       description: 'Custom recipe',
+      source: '',
       keywords: imported.keywords.join(', '),
       defaultServings: String(imported.default_servings || 2),
       minServings: String(imported.min_servings || 1),

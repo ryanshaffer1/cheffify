@@ -37,6 +37,7 @@ class Recipe(Base):
     servings_min = Column(Integer, nullable=True)
     servings_max = Column(Integer, nullable=True)
     image_url = Column(Text, nullable=True)
+    source = Column(Text, nullable=True)
     source_type = Column(String(32), nullable=False, default="custom")
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 

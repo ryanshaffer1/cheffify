@@ -68,6 +68,7 @@ def _recipe_to_read(recipe: Recipe) -> RecipeRead:
         servings_min=recipe.servings_min,
         servings_max=recipe.servings_max,
         image_url=recipe.image_url,
+        source=recipe.source,
         source_type=recipe.source_type,
         keywords=[keyword.keyword for keyword in recipe.keywords],
         tools=[tool.name for tool in recipe.tools],
@@ -175,6 +176,7 @@ def create_recipe(payload: RecipeCreate, db: Session = Depends(get_db)) -> Recip
         servings_min=payload.servings_min,
         servings_max=payload.servings_max,
         image_url=payload.image_url,
+        source=payload.source,
         source_type=payload.source_type,
         created_by=1,
     )
@@ -254,6 +256,7 @@ def update_recipe(
     recipe.servings_min = payload.servings_min
     recipe.servings_max = payload.servings_max
     recipe.image_url = payload.image_url
+    recipe.source = payload.source
     recipe.source_type = payload.source_type
 
     for existing_keyword in list(recipe.keywords):

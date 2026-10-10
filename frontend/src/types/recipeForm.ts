@@ -1,6 +1,7 @@
 export type RecipeFormFields = {
   title: string
   description: string
+  source: string
   keywords: string
   defaultServings: string
   minServings: string
@@ -16,6 +17,7 @@ export type RecipeFormFields = {
 export const createEmptyRecipeFormFields = (): RecipeFormFields => ({
   title: '',
   description: '',
+  source: '',
   keywords: '',
   defaultServings: '2',
   minServings: '1',

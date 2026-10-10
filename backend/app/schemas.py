@@ -55,6 +55,7 @@ class RecipeCreate(BaseModel):
     servings_min: int | None = Field(default=None, gt=0)
     servings_max: int | None = Field(default=None, gt=0)
     image_url: str | None = None
+    source: str | None = None
     source_type: Literal["built_in", "custom"] = "custom"
     keywords: list[str] = []
     tools: list[str] = []

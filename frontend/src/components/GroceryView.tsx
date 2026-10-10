@@ -17,6 +17,37 @@ type GroceryViewProps = {
 
 export function GroceryView({ manualItemRow, setManualItemRow, items, onAddItem, onToggleItem, onClear }: GroceryViewProps) {
   const [confirmClear, setConfirmClear] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
+
+  const copyGroceryList = async () => {
+    const text = items.map((item) => {
+      const formatted = formatGroceryItemText(item)
+      const quantity = formatted.meta ? `${formatted.meta} ` : ''
+      const label = `${quantity}${formatted.name}`
+      return item.checked ? `[x] ${label}` : label
+    }).join('\n')
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const input = document.createElement('textarea')
+        input.value = text
+        input.setAttribute('readonly', '')
+        input.style.position = 'fixed'
+        input.style.opacity = '0'
+        document.body.appendChild(input)
+        input.select()
+        const copied = document.execCommand('copy')
+        document.body.removeChild(input)
+        if (!copied) throw new Error('Clipboard copy failed')
+      }
+      setCopyStatus('Copied')
+    } catch {
+      setCopyStatus('Copy failed')
+    }
+    window.setTimeout(() => setCopyStatus(''), 2000)
+  }
 
   return (
     <main className="page">
@@ -31,7 +62,15 @@ export function GroceryView({ manualItemRow, setManualItemRow, items, onAddItem,
             onChange={(event) => setManualItemRow((current) => ({ ...current, unit: event.target.value }))} />
           <button type="button" className="icon-button" aria-label="Add manual item" onClick={onAddItem}>+</button>
         </div>
-        <div className="section-header"><h2>Grocery List</h2></div>
+        <div className="section-header">
+          <h2>Grocery List</h2>
+          <div className="section-header-actions">
+            {copyStatus ? <span className="muted" role="status" aria-live="polite">{copyStatus}</span> : null}
+            <button type="button" className="secondary-button" onClick={() => void copyGroceryList()} disabled={!items.length}>
+              Copy
+            </button>
+          </div>
+        </div>
         <div className="stack-list grocery-list">
           {items.map((item, index) => {
             const text = formatGroceryItemText(item)

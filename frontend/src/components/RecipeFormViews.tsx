@@ -79,11 +79,11 @@ function InstructionRowsEditor({ rows, setRows, ingredients, expandedIndex, setE
     <div className="ingredient-editor">
       <label>Cooking Instructions</label>
       {rows.map((step, index) => (
-        <div key={`instruction-${index}`} className="ingredient-row instruction-row">
+        <div key={`instruction-${index}`} className="instruction-row">
           <span className="instruction-step-number">{index + 1}.</span>
           <div className="instruction-entry">
             <textarea
-              className="ingredient-field ingredient-field--name instruction-text-area"
+              className="instruction-text-area"
               value={step.instruction}
               placeholder="Add a cooking step"
               rows={expandedIndex === index ? 3 : 1}
@@ -95,9 +95,9 @@ function InstructionRowsEditor({ rows, setRows, ingredients, expandedIndex, setE
           </div>
           {rows.length > 1 ? (
             <div className="instruction-actions">
+              <button type="button" className="icon-button" aria-label="Remove instruction step" onClick={() => removeStep(index)}>X</button>
               <button type="button" className="move-button" aria-label="Move instruction up" disabled={index === 0} onClick={() => moveStep(index, -1)}>↑</button>
               <button type="button" className="move-button" aria-label="Move instruction down" disabled={index === rows.length - 1} onClick={() => moveStep(index, 1)}>↓</button>
-              <button type="button" className="icon-button" aria-label="Remove instruction step" onClick={() => removeStep(index)}>X</button>
             </div>
           ) : null}
         </div>
@@ -185,20 +185,22 @@ export function RecipeFormView(props: RecipeFormViewProps) {
   ) : null
 
   return (
-    <section className="panel upload-panel">
-      <div className="section-header">
+    <section className={`panel upload-panel${isEditing ? ' recipe-edit-panel' : ''}`}>
+      <div className={`section-header${isEditing ? ' recipe-edit-header' : ''}`}>
         <h2>{isEditing ? 'Edit Recipe' : 'Upload Recipe'}</h2>
         <div className="section-header-actions">
           {props.mode === 'upload' && <button type="button" className="secondary-button" disabled={props.importing} onClick={openFilePicker}>{props.importing ? 'Importing…' : 'Import'}</button>}
+          {isEditing && <button type="submit" form="edit-recipe-form" className="primary-button recipe-edit-save-button" disabled={props.saving}>{props.saving ? 'Saving…' : 'Save'}</button>}
           <button type="button" className="text-button" onClick={props.onBack}>{isEditing ? 'Cancel' : 'Back'}</button>
         </div>
       </div>
 
       {importControls}
 
-      <form className="upload-form" onSubmit={props.onSubmit}>
+      <form id={isEditing ? 'edit-recipe-form' : undefined} className="upload-form" onSubmit={props.onSubmit}>
         <label>Recipe title<input name="title" type="text" value={props.fields.title} placeholder="e.g. Coconut Chickpea Curry" onChange={(event) => updateField('title', event.target.value)} /></label>
         {recipe && <label>Description<input name="description" type="text" value={props.fields.description} onChange={(event) => updateField('description', event.target.value)} /></label>}
+        <label>Source<input name="source" type="text" value={props.fields.source} placeholder="e.g. Family cookbook or website URL" onChange={(event) => updateField('source', event.target.value)} /></label>
         <label>Keywords<input name="keywords" type="text" value={props.fields.keywords} placeholder="quick, dinner, vegetarian" onChange={(event) => updateField('keywords', event.target.value)} /></label>
         <div className="subsection-block">
           <h3>Image</h3>
