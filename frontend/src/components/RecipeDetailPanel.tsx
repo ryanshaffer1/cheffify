@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { Recipe } from '../types/recipe'
+import { SmartText } from '../utils/text'
 
 type RecipeDetailPanelProps = {
   recipe: Recipe
@@ -68,7 +69,7 @@ export function RecipeDetailPanel({
         <span>{getServingRangeText(recipe)}</span>
         <span>{recipe.keywords.join(', ') || 'custom'}</span>
       </div>
-      {recipe.source ? <p className="recipe-source">Source: {recipe.source}</p> : null}
+      {recipe.source ? <p className="recipe-source">Source: <SmartText text={recipe.source} /> </p> : null}
 
       <div className="detail-section">
         <h3>Ingredients ({defaultServings} Serving{defaultServings !== 1 ? 's' : ''})</h3>

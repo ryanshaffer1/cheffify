@@ -53,6 +53,14 @@ export function GroceryView({ manualItemRow, setManualItemRow, items, onAddItem,
     window.setTimeout(() => setCopyStatus(''), 2000)
   }
 
+  const countGroceryList = () => {
+    return items.length
+  }
+
+  const countUncheckedGroceryList = () => {
+    return items.filter(item => !item.checked).length;
+  }
+
   return (
     <main className="page">
       <section className="panel">
@@ -75,6 +83,7 @@ export function GroceryView({ manualItemRow, setManualItemRow, items, onAddItem,
             </button>
           </div>
         </div>
+        <div><span>{countGroceryList()} items ({countUncheckedGroceryList()} left)</span></div>
         <div className="stack-list grocery-list">
           {items.map((item, index) => {
             const text = formatGroceryItemText(item)
