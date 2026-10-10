@@ -83,7 +83,7 @@ function InstructionRowsEditor({ rows, setRows, ingredients, expandedIndex, setE
           <span className="instruction-step-number">{index + 1}.</span>
           <div className="instruction-entry">
             <textarea
-              className="instruction-text-area"
+              className="expanding-textarea"
               value={step.instruction}
               placeholder="Add a cooking step"
               rows={expandedIndex === index ? 3 : 1}
@@ -119,6 +119,7 @@ type RecipeFormViewBaseProps = {
   imageUrl: string | null
   uploadingImage: boolean
   expandedInstructionIndex: number | null
+  saving: boolean
   setExpandedInstructionIndex: Dispatch<SetStateAction<number | null>>
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -136,7 +137,6 @@ type RecipeFormViewBaseProps = {
 type EditRecipeFormMode = {
   mode: 'edit'
   recipe: Recipe
-  saving: boolean
   onBack: () => void
 }
 
@@ -156,8 +156,8 @@ export type RecipeFormViewProps = RecipeFormViewBaseProps & (EditRecipeFormMode 
 export function RecipeFormView(props: RecipeFormViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const openFilePicker = () => fileInputRef.current?.click()
-  const isEditing = props.mode === 'edit'
-  const recipe = props.mode === 'edit' ? props.recipe : undefined
+  const isNewRecipe = props.mode === 'upload'
+  const recipe = isNewRecipe ? undefined : props.recipe
   const updateField = (field: keyof RecipeFormFields, value: string) =>
     props.setFields((current) => ({ ...current, [field]: value }))
   const importControls = props.mode === 'upload' ? (
@@ -185,21 +185,30 @@ export function RecipeFormView(props: RecipeFormViewProps) {
   ) : null
 
   return (
-    <section className={`panel upload-panel${isEditing ? ' recipe-edit-panel' : ''}`}>
-      <div className={`section-header${isEditing ? ' recipe-edit-header' : ''}`}>
-        <h2>{isEditing ? 'Edit Recipe' : 'Upload Recipe'}</h2>
+    <section className="panel upload-panel">
+      <div className={"section-header recipe-edit-header"}>
+        <h2>{isNewRecipe ? 'New Recipe' : 'Edit Recipe'}</h2>
         <div className="section-header-actions">
           {props.mode === 'upload' && <button type="button" className="secondary-button" disabled={props.importing} onClick={openFilePicker}>{props.importing ? 'Importing…' : 'Import'}</button>}
-          {isEditing && <button type="submit" form="edit-recipe-form" className="primary-button recipe-edit-save-button" disabled={props.saving}>{props.saving ? 'Saving…' : 'Save'}</button>}
-          <button type="button" className="text-button" onClick={props.onBack}>{isEditing ? 'Cancel' : 'Back'}</button>
+          <button type="submit" form="edit-recipe-form" className="primary-button recipe-edit-save-button" disabled={props.saving}>{props.saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="text-button" onClick={props.onBack}>Cancel</button>
         </div>
       </div>
 
       {importControls}
 
-      <form id={isEditing ? 'edit-recipe-form' : undefined} className="upload-form" onSubmit={props.onSubmit}>
-        <label>Recipe title<input name="title" type="text" value={props.fields.title} placeholder="e.g. Coconut Chickpea Curry" onChange={(event) => updateField('title', event.target.value)} /></label>
-        {recipe && <label>Description<input name="description" type="text" value={props.fields.description} onChange={(event) => updateField('description', event.target.value)} /></label>}
+      <form id='edit-recipe-form' className="upload-form" onSubmit={props.onSubmit}>
+        <label>Recipe title<textarea
+            className="expanding-textarea"
+            value={props.fields.title}
+            placeholder="e.g. Coconut Chickpea Curry"
+            onChange={(event) => updateField('title', event.target.value)}
+        /></label>
+        <label>Description<textarea
+            className="expanding-textarea"
+            value={props.fields.description}
+            onChange={(event) => updateField('description', event.target.value)}
+        /></label>
         <label>Source<input name="source" type="text" value={props.fields.source} placeholder="e.g. Family cookbook or website URL" onChange={(event) => updateField('source', event.target.value)} /></label>
         <label>Keywords<input name="keywords" type="text" value={props.fields.keywords} placeholder="quick, dinner, vegetarian" onChange={(event) => updateField('keywords', event.target.value)} /></label>
         <div className="subsection-block">
@@ -219,7 +228,7 @@ export function RecipeFormView(props: RecipeFormViewProps) {
             <label>Max<input name="maxServings" type="number" min="1" value={props.fields.maxServings} onChange={(event) => updateField('maxServings', event.target.value)} /></label>
           </div>
         </div>
-        <IngredientRowsEditor rows={props.ingredientRows} updateIngredientRow={props.updateIngredientRow} addIngredientRow={props.addIngredientRow} removeIngredientRow={props.removeIngredientRow} label={isEditing ? 'Ingredients (based on default servings)' : 'Ingredients'} />
+        <IngredientRowsEditor rows={props.ingredientRows} updateIngredientRow={props.updateIngredientRow} addIngredientRow={props.addIngredientRow} removeIngredientRow={props.removeIngredientRow} label={isNewRecipe ? 'Ingredients' : 'Ingredients (based on default servings)'} />
         <CookwareRowsEditor rows={props.cookwareRows} setRows={props.setCookwareRows} addCookwareRow={props.addCookwareRow} removeCookwareRow={props.removeCookwareRow} />
         <InstructionRowsEditor rows={props.instructionRows} setRows={props.setInstructionRows} ingredients={props.ingredientRows} expandedIndex={props.expandedInstructionIndex} setExpandedIndex={props.setExpandedInstructionIndex} toggleIngredient={props.toggleIngredient} moveStep={props.moveStep} addStep={props.addStep} removeStep={props.removeStep} />
         <div className="subsection-block">
@@ -233,8 +242,8 @@ export function RecipeFormView(props: RecipeFormViewProps) {
           </div>
         </div>
         <label>Nutrition notes<input name="nutritionNotes" type="text" value={props.fields.nutritionNotes} placeholder="Optional notes" onChange={(event) => updateField('nutritionNotes', event.target.value)} /></label>
-        <button type="submit" className="primary-button wide-button" disabled={props.mode === 'edit' && props.saving}>
-          {props.mode === 'edit' && props.saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Recipe'}
+        <button type="submit" className="primary-button wide-button" disabled={props.saving}>
+          {props.saving ? 'Saving…' : isNewRecipe ? 'Save Recipe' : 'Save Changes'}
         </button>
       </form>
     </section>

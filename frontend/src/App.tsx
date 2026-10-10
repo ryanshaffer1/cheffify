@@ -4,6 +4,7 @@ import { RecipeFormView } from './components/RecipeFormViews'
 import { RecipeListView } from './components/RecipeListView'
 import { GroceryView } from './components/GroceryView'
 import { MealPlanView } from './components/MealPlanView'
+import { ScrollToTop } from './hooks/common'
 import { useGroceries } from './hooks/useGroceries'
 import { useMealPlan } from './hooks/useMealPlan'
 import { useRecipeEditor } from './hooks/useRecipeEditor'
@@ -613,6 +614,7 @@ function App() {
               setCookwareRows={editor.setUploadCookwareRows}
               imageUrl={editor.uploadImageUrl}
               uploadingImage={uploadingImage}
+              saving={savingRecipe}
               importing={recipeImport.importing}
               pendingFiles={recipeImport.pendingFiles}
               expandedInstructionIndex={editor.expandedUploadInstructionIndex}

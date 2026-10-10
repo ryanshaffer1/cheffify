@@ -124,12 +124,21 @@
   gap: 8px;
 }
 
+.expanding-textarea {
+  min-height: 42px;
+  max-height: 112px;
+  flex-shrink: 0;
+  resize: none;
+  field-sizing: content;
+  transition: min-height 0.15s ease, box-shadow 0.15s ease;
+}
+
 .recipe-edit-header {
   position: sticky;
   top: 88px;
   z-index: 9;
   margin: -16px -16px 12px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   background: #fffdfb;
   border-bottom: 1px solid #ebdfd5;
 }
@@ -580,6 +589,7 @@
 .upload-form {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 12px;
 }
 
@@ -623,14 +633,6 @@
   gap: 8px;
 }
 
-.instruction-text-area {
-  min-height: 42px;
-  max-height: 112px;
-  flex-shrink: 0;
-  resize: none;
-  field-sizing: content;
-  transition: min-height 0.15s ease, box-shadow 0.15s ease;
-}
 
 .instruction-row:focus-within .instruction-text-area {
   min-height: 92px;
@@ -737,7 +739,7 @@
 
 .instruction-list {
   margin: 0;
-  padding-left: 22px;
+  padding-left: 0px;
   color: #433732;
   display: flex;
   flex-direction: column;

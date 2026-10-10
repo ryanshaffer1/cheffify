@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { Recipe } from '../types/recipe'
 
 type RecipeDetailPanelProps = {
@@ -28,6 +29,12 @@ export function RecipeDetailPanel({
   formatNutritionValue,
 }: RecipeDetailPanelProps) {
   const defaultServings = getDefaultServings(recipe)
+
+  useEffect(() => {
+      // Jumps to top when this specific component mounts
+      window.scrollTo(0, 0);
+  }, []); // Empty dependency array ensures this runs exactly once on mount
+
 
   return (
     <section className="panel detail-panel">
@@ -114,7 +121,7 @@ export function RecipeDetailPanel({
 
               return (
                 <li key={`${recipe.id}-instruction-${instruction.step_number}`}>
-                  <span>{instruction.instruction}</span>
+                  <span>{instruction.step_number}. {instruction.instruction}</span>
                   {linkedIngredients.length > 0 ? (
                     <span className="instruction-ingredients">
                       Ingredients: {linkedIngredients.join(', ')}
