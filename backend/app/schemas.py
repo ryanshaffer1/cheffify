@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.tag_utils import normalize_tags
 
 
 class NutritionBase(BaseModel):
@@ -54,14 +56,20 @@ class RecipeCreate(BaseModel):
     default_servings: int = Field(..., gt=0)
     servings_min: int | None = Field(default=None, gt=0)
     servings_max: int | None = Field(default=None, gt=0)
+    estimated_cooking_time_minutes: int | None = Field(default=None, gt=0)
     image_url: str | None = None
     source: str | None = None
     source_type: Literal["built_in", "custom"] = "custom"
-    keywords: list[str] = []
+    tags: list[str] = []
     tools: list[str] = []
     ingredients: list[IngredientEdit] = []
     instructions: list[InstructionEdit] = []
     nutrition: NutritionBase | None = None
+
+    @field_validator("tags")
+    @classmethod
+    def title_case_tags(cls, tags: list[str]) -> list[str]:
+        return normalize_tags(tags)
 
 
 class RecipeRead(RecipeCreate):
@@ -72,14 +80,20 @@ class RecipeRead(RecipeCreate):
 
 class ImportedRecipeBase(BaseModel):
     title: str
-    keywords: list[str] = []
+    tags: list[str] = []
     ingredients: list[IngredientBase] = []
     instructions: list[InstructionBase] = []
     tools: list[str] = []
     default_servings: int = Field(gt=0)
     min_servings: int = Field(gt=0)
     max_servings: int = Field(gt=0)
+    estimated_cooking_time_minutes: int | None = Field(default=None, gt=0)
     nutrition: NutritionBase = NutritionBase()
+
+    @field_validator("tags")
+    @classmethod
+    def title_case_tags(cls, tags: list[str]) -> list[str]:
+        return normalize_tags(tags)
 
 
 class ImportedRecipeRead(ImportedRecipeBase):

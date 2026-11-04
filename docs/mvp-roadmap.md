@@ -71,7 +71,7 @@ The MVP is intentionally scoped to a single-user experience, with structure in p
 ### Features
 
 - mobile-first dashboard
-- recipe search by title, keyword, and ingredient
+- recipe search by title, tag, and ingredient
 - recipe detail view with ingredients, instructions, cookware, and nutrition
 - meal plan builder with selected recipes
 - grocery list view with check-off state
@@ -171,7 +171,7 @@ The MVP is intentionally scoped to a single-user experience, with structure in p
 The MVP is successful when a user can:
 
 - create a recipe with name, ingredients, instructions, tools, servings range, nutrition, and image
-- search by title, keywords, and ingredient
+- search by title, tags, and ingredient
 - create a meal plan from recipes
 - generate a grocery list from those recipes with aggregated ingredient quantities
 - manually add extra grocery items

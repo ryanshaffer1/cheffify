@@ -22,13 +22,18 @@ import {
   normalizeIngredientUnit,
   resolveImageUrl,
 } from './utils/recipeFormatting'
-import { normalizeRecipe } from './utils/normalizeRecipe'
+import { normalizeRecipe, normalizeStoredRecipe } from './utils/normalizeRecipe'
 import './App.css'
 
 const STORAGE_KEYS = {
   recipes: 'cheffify.recipes',
   activeTab: 'cheffify.activeTab',
 } as const
+const MAX_QUICK_FILTER_TAGS = 5
+const RECIPE_NAME_CONFLICT_MESSAGE = 'A recipe with this name already exists. Please choose another name.'
+
+const normalizeRecipeTitle = (title: string): string =>
+  title.trim().replace(/\s+/g, ' ').toLowerCase()
 
 const readStorage = <T,>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') {
@@ -52,7 +57,7 @@ const initialRecipes: Recipe[] = [
     defaultServings: 2,
     servingsMin: 1,
     servingsMax: 4,
-    keywords: ['quick', 'dinner'],
+    tags: ['Quick', 'Dinner'],
     ingredients: [
       makeIngredient('Chicken breast', 2, 'pieces'),
       makeIngredient('Broccoli', 2, 'cups'),
@@ -73,7 +78,7 @@ const initialRecipes: Recipe[] = [
     defaultServings: 2,
     servingsMin: 1,
     servingsMax: 4,
-    keywords: ['vegetarian', 'quick'],
+    tags: ['Vegetarian', 'Quick'],
     ingredients: [
       makeIngredient('Pasta', 8, 'oz'),
       makeIngredient('Lemon', 1, 'whole'),
@@ -94,7 +99,7 @@ const initialRecipes: Recipe[] = [
     defaultServings: 2,
     servingsMin: 1,
     servingsMax: 4,
-    keywords: ['lunch', 'vegetarian'],
+    tags: ['Lunch', 'Vegetarian'],
     ingredients: [
       makeIngredient('Tomatoes', 2, 'cups'),
       makeIngredient('Cucumber', 1, 'whole'),
@@ -122,9 +127,12 @@ function App() {
   })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
-  const [recipes, setRecipes] = useState<Recipe[]>(() => readStorage<Recipe[]>(STORAGE_KEYS.recipes, initialRecipes))
+  const [recipes, setRecipes] = useState<Recipe[]>(() =>
+    readStorage<Recipe[]>(STORAGE_KEYS.recipes, initialRecipes).map(normalizeStoredRecipe)
+  )
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
   const [showUploadForm, setShowUploadForm] = useState(false)
+  const [recipeFormMessage, setRecipeFormMessage] = useState<string | null>(null)
   const selectedRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === selectedRecipeId) ?? null,
     [recipes, selectedRecipeId]
@@ -136,6 +144,7 @@ function App() {
       return
     }
     editor.applyImportedRecipe(imported)
+    setRecipeFormMessage(null)
     setShowUploadForm(true)
   })
   const {
@@ -157,7 +166,6 @@ function App() {
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
-
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.recipes, JSON.stringify(recipes))
   }, [recipes])
@@ -202,7 +210,7 @@ function App() {
   }
 
   const loadRecipes = async () => {
-    const localRecipes = readStorage<Recipe[]>(STORAGE_KEYS.recipes, initialRecipes)
+    const localRecipes = readStorage<Recipe[]>(STORAGE_KEYS.recipes, initialRecipes).map(normalizeStoredRecipe)
     setRecipes(localRecipes)
 
     if (!online) {
@@ -227,17 +235,51 @@ function App() {
 
   const filteredRecipes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
+    const normalizedFilter = filter.toLocaleLowerCase()
 
     return recipes.filter((recipe) => {
-      const matchesFilter = filter === 'all' || recipe.keywords.includes(filter)
+      const matchesFilter = filter === 'all' || recipe.tags.some((tag) => tag.trim().toLocaleLowerCase() === normalizedFilter)
       const ingredientText = recipe.ingredients
         .map((ingredient) => `${ingredient.display_name} ${ingredient.normalized_name}`)
         .join(' ')
-      const haystack = `${recipe.title} ${recipe.description} ${ingredientText} ${recipe.keywords.join(' ')}`.toLowerCase()
+      const haystack = `${recipe.title} ${recipe.description} ${ingredientText} ${recipe.tags.join(' ')}`.toLowerCase()
       const matchesQuery = !normalizedQuery || haystack.includes(normalizedQuery)
       return matchesFilter && matchesQuery
     })
   }, [filter, query, recipes])
+
+  const quickFilterTags = useMemo(() => {
+    const tagCounts = new Map<string, { label: string; count: number }>()
+    recipes.forEach((recipe) => {
+      const recipeTags = new Set(recipe.tags.map((tag) => tag.trim()).filter(Boolean))
+      recipeTags.forEach((tag) => {
+        const key = tag.toLocaleLowerCase()
+        const entry = tagCounts.get(key)
+        if (entry) {
+          entry.count += 1
+          if (tag.localeCompare(entry.label, undefined, { sensitivity: 'case' }) < 0) {
+            entry.label = tag
+          }
+        } else {
+          tagCounts.set(key, { label: tag, count: 1 })
+        }
+      })
+    })
+
+    return [...tagCounts.values()]
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }))
+      .slice(0, MAX_QUICK_FILTER_TAGS)
+      .map((entry) => entry.label)
+  }, [recipes])
+
+  const standardizedTags = useMemo(() => {
+    const tagsByKey = new Map<string, string>()
+    recipes.forEach((recipe) => recipe.tags.forEach((tag) => {
+      const trimmedTag = tag.trim()
+      if (trimmedTag) tagsByKey.set(trimmedTag.toLocaleLowerCase(), trimmedTag)
+    }))
+    return [...tagsByKey.values()].sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+  }, [recipes])
 
   const openRecipeDetails = (recipeId: number) => {
     setSelectedRecipeId(recipeId)
@@ -269,9 +311,22 @@ function App() {
 
   const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setRecipeFormMessage(null)
     const fields = editor.uploadFields
     const title = fields.title.trim()
-    const keywords = fields.keywords
+    if (!title) return
+
+    const normalizedTitle = normalizeRecipeTitle(title)
+    if (recipes.some((recipe) => normalizeRecipeTitle(recipe.title) === normalizedTitle)) {
+      setRecipeFormMessage(RECIPE_NAME_CONFLICT_MESSAGE)
+      return
+    }
+    if (!online) {
+      setRecipeFormMessage('Connect to the internet to check the recipe name and save this recipe.')
+      return
+    }
+
+    const tags = fields.tags
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean)
@@ -299,9 +354,11 @@ function App() {
       })
     const parsedTools = editor.uploadCookwareRows.map((tool) => tool.trim()).filter(Boolean)
 
-    if (!title || parsedIngredients.length === 0) {
+    if (parsedIngredients.length === 0) {
       return
     }
+
+    setSavingRecipe(true)
 
     const defaultServings = Number(fields.defaultServings) || 2
     const minServings = Number(fields.minServings) || 1
@@ -316,33 +373,17 @@ function App() {
       fiber_g: Number(fields.fiber) || null,
       notes: fields.nutritionNotes.trim() || null,
     }
-    const localRecipe: Recipe = {
-      id: Date.now(),
-      title,
-      description: 'Custom recipe',
-      servings: defaultServings,
-      defaultServings,
-      servingsMin: normalizedMinServings,
-      servingsMax: normalizedMaxServings,
-      imageUrl: editor.uploadImageUrl,
-      source: fields.source.trim() || null,
-      keywords: keywords.length ? keywords : ['custom'],
-      ingredients: parsedIngredients,
-      instructions: parsedInstructions,
-      tools: parsedTools,
-      nutrition,
-    }
-
     const payload = {
       title,
-      description: 'Custom recipe',
+      description: fields.description.trim() || null,
       default_servings: defaultServings,
       servings_min: normalizedMinServings,
       servings_max: normalizedMaxServings,
+      estimated_cooking_time_minutes: Number(fields.estimatedCookingTimeMinutes) || null,
       image_url: editor.uploadImageUrl,
       source: fields.source.trim() || null,
       source_type: 'custom',
-      keywords: localRecipe.keywords,
+      tags: tags.length ? tags : ['custom'],
       tools: parsedTools,
       ingredients: parsedIngredients.map((ingredient) => ({
         display_name: ingredient.display_name,
@@ -356,46 +397,51 @@ function App() {
       nutrition: Object.values(nutrition).every((value) => value === null || value === '') ? null : nutrition,
     }
 
-    setRecipes((current) => [localRecipe, ...current])
-    editor.resetUpload()
-    setShowUploadForm(false)
-    setSelectedRecipeId(localRecipe.id)
-    setActiveTab('recipes')
-    if (!online) {
-      return
-    }
-
     try {
       const created = await createRecipe(payload)
-      if (created) {
-        const normalizedCreated = normalizeRecipe(created)
-        setRecipes((current) => [normalizedCreated, ...current.filter((item) => item.id !== localRecipe.id)])
-        setSelectedRecipeId(normalizedCreated.id)
-      }
-    } catch {
-      // Keep local draft when the server is temporarily unavailable.
+      const normalizedCreated = normalizeRecipe(created)
+      setRecipes((current) => [normalizedCreated, ...current])
+      editor.resetUpload()
+      setShowUploadForm(false)
+      setSelectedRecipeId(normalizedCreated.id)
+      setActiveTab('recipes')
+    } catch (error) {
+      setRecipeFormMessage(error instanceof Error ? error.message : 'Unable to save this recipe.')
+    } finally {
+      setSavingRecipe(false)
     }
   }
 
   const saveEditedRecipe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setRecipeFormMessage(null)
     const id = editingRecipeId ?? selectedRecipeId
 
     if (id === null || savingRecipe) {
       return
     }
 
-    setSavingRecipe(true)
-
     const fields = editor.editFields
     const title = fields.title.trim()
-    const description = fields.description.trim() || 'Custom recipe'
+    if (!title) return
+    const normalizedTitle = normalizeRecipeTitle(title)
+    if (recipes.some((recipe) => recipe.id !== id && normalizeRecipeTitle(recipe.title) === normalizedTitle)) {
+      setRecipeFormMessage(RECIPE_NAME_CONFLICT_MESSAGE)
+      return
+    }
+    if (!online) {
+      setRecipeFormMessage('Connect to the internet to check the recipe name and save your changes.')
+      return
+    }
+
+    setSavingRecipe(true)
+    const description = fields.description.trim() || null
     const defaultServings = Number(fields.defaultServings) || 2
     const minServings = Number(fields.minServings) || 1
     const maxServings = Number(fields.maxServings) || defaultServings
     const normalizedMinServings = Math.max(1, minServings)
     const normalizedMaxServings = Math.max(defaultServings, maxServings)
-    const keywords = fields.keywords
+    const tags = fields.tags
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean)
@@ -451,41 +497,17 @@ function App() {
 
     const nextImageUrl = editor.editImageUrl ?? selectedRecipe?.imageUrl ?? null
 
-    const patch: Recipe = {
-      id,
-      title,
-      description,
-      servings: defaultServings,
-      defaultServings,
-      servingsMin: normalizedMinServings,
-      servingsMax: normalizedMaxServings,
-      imageUrl: nextImageUrl,
-      source: fields.source.trim() || null,
-      keywords: keywords.length ? keywords : ['custom'],
-      ingredients,
-      instructions: instructionSteps,
-      tools: cookware,
-      nutrition,
-    }
-
-    if (!online) {
-      setRecipes((current) => current.map((recipe) => (recipe.id === id ? patch : recipe)))
-      setSelectedRecipeId(id)
-      setEditingRecipeId(null)
-      setSavingRecipe(false)
-      return
-    }
-
     const payload = {
       title,
       description,
       default_servings: defaultServings,
       servings_min: normalizedMinServings,
       servings_max: normalizedMaxServings,
+      estimated_cooking_time_minutes: Number(fields.estimatedCookingTimeMinutes) || null,
       image_url: nextImageUrl,
       source: fields.source.trim() || null,
       source_type: 'custom',
-      keywords: patch.keywords,
+      tags: tags.length ? tags : ['custom'],
       tools: cookware,
       ingredients: ingredients.map((ingredient) => ({
         id: ingredient.id ?? null,
@@ -505,8 +527,9 @@ function App() {
       setRecipes((current) => current.map((recipe) => (recipe.id === id ? normalizeRecipe(updated) : recipe)))
       setSelectedRecipeId(id)
       setEditingRecipeId(null)
+      setRecipeFormMessage(null)
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Unable to save this recipe.')
+      setRecipeFormMessage(error instanceof Error ? error.message : 'Unable to save this recipe.')
     } finally {
       setSavingRecipe(false)
     }
@@ -561,7 +584,7 @@ function App() {
               recipe={selectedRecipe}
               isInMealPlan={isRecipeInMealPlan(selectedRecipe.id)}
               onBack={() => setSelectedRecipeId(null)}
-              onEdit={() => setEditingRecipeId(selectedRecipe.id)}
+              onEdit={() => { setRecipeFormMessage(null); setEditingRecipeId(selectedRecipe.id) }}
               onDelete={() => setDeleteConfirmId(selectedRecipe.id)}
               onAddToMealPlan={() => toggleMealPlanRecipe(selectedRecipe)}
               resolveImageUrl={resolveImageUrl}
@@ -583,12 +606,15 @@ function App() {
               cookwareRows={editor.editCookwareRows}
               setCookwareRows={editor.setEditCookwareRows}
               imageUrl={editor.editImageUrl}
+              standardizedTags={standardizedTags}
               uploadingImage={uploadingImage}
               saving={savingRecipe}
+              message={recipeFormMessage}
               expandedInstructionIndex={editor.expandedEditInstructionIndex}
               setExpandedInstructionIndex={editor.setExpandedEditInstructionIndex}
-              onBack={() => setEditingRecipeId(null)}
+              onBack={() => { setEditingRecipeId(null); setRecipeFormMessage(null) }}
               onSubmit={saveEditedRecipe}
+              onTitleChange={() => setRecipeFormMessage(null)}
               onImageChange={(event) => void handleImageFileChange(event, 'edit')}
               updateIngredientRow={(index, field, value) => editor.updateRow(editor.setEditIngredientRows, index, field, value)}
               addIngredientRow={() => editor.addIngredient(editor.setEditIngredientRows)}
@@ -612,14 +638,17 @@ function App() {
               cookwareRows={editor.uploadCookwareRows}
               setCookwareRows={editor.setUploadCookwareRows}
               imageUrl={editor.uploadImageUrl}
+              standardizedTags={standardizedTags}
               uploadingImage={uploadingImage}
               saving={savingRecipe}
+              message={recipeFormMessage}
               importing={recipeImport.importing}
               pendingFiles={recipeImport.pendingFiles}
               expandedInstructionIndex={editor.expandedUploadInstructionIndex}
               setExpandedInstructionIndex={editor.setExpandedUploadInstructionIndex}
-              onBack={() => setShowUploadForm(false)}
+              onBack={() => { setShowUploadForm(false); setRecipeFormMessage(null) }}
               onSubmit={handleUploadSubmit}
+              onTitleChange={() => setRecipeFormMessage(null)}
               onImageChange={(event) => void handleImageFileChange(event, 'upload')}
               onImportFileChange={(event) => void recipeImport.handleFileChange(event)}
               onImportPending={(files) => void recipeImport.importFiles(files)}
@@ -641,9 +670,10 @@ function App() {
               loading={loading}
               query={query}
               filter={filter}
+              quickFilters={quickFilterTags}
               onQueryChange={setQuery}
               onFilterChange={setFilter}
-              onUpload={() => setShowUploadForm(true)}
+              onUpload={() => { setRecipeFormMessage(null); setShowUploadForm(true) }}
               onOpenRecipe={openRecipeDetails}
               isRecipeInMealPlan={isRecipeInMealPlan}
               onToggleMealPlanRecipe={toggleMealPlanRecipe}

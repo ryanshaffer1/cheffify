@@ -5,7 +5,7 @@ from app.models import (
     Recipe,
     RecipeIngredient,
     RecipeInstruction,
-    RecipeKeyword,
+    RecipeTag,
     RecipeNutrition,
     User,
 )
@@ -36,9 +36,9 @@ def seed_demo_data() -> None:
 
         db.add_all(
             [
-                RecipeKeyword(recipe_id=recipe.id, keyword="quick"),
-                RecipeKeyword(recipe_id=recipe.id, keyword="dinner"),
-                RecipeKeyword(recipe_id=recipe.id, keyword="sheet pan"),
+                RecipeTag(recipe_id=recipe.id, tag="Quick"),
+                RecipeTag(recipe_id=recipe.id, tag="Dinner"),
+                RecipeTag(recipe_id=recipe.id, tag="Sheet Pan"),
                 RecipeIngredient(
                     recipe_id=recipe.id,
                     display_name="Chicken breast",

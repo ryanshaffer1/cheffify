@@ -15,13 +15,17 @@ export async function uploadRecipeImage(file: File): Promise<string | null> {
   return typeof data.image_url === 'string' ? data.image_url : null
 }
 
-export async function createRecipe(payload: unknown): Promise<unknown | null> {
+export async function createRecipe(payload: unknown): Promise<unknown> {
   const response = await fetch(`${API_BASE}/recipes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  return response.ok ? response.json() : null
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null)
+    throw new Error(errorPayload?.detail || `Recipe creation failed with status ${response.status}`)
+  }
+  return response.json()
 }
 
 export async function updateRecipe(recipeId: number, payload: unknown): Promise<unknown> {

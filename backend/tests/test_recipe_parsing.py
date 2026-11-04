@@ -3,16 +3,10 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app.database import engine
-from app.database_migrations import ensure_instruction_ingredient_links
 from app.main import app
-from app.models import Base
 from app.recipe_parsing import merge_text_with_overlap, parse_recipe
 
 
-Base.metadata.create_all(bind=engine)
-with engine.begin() as connection:
-    ensure_instruction_ingredient_links(connection)
 client = TestClient(app)
 
 
@@ -57,8 +51,9 @@ Fiber: 4g
     recipe = parse_recipe(raw)
 
     assert recipe["title"] == "Jasmine Rice Bowl"
-    assert recipe["keywords"] == ["quick", "vegetarian"]
+    assert recipe["tags"] == ["Quick", "Vegetarian"]
     assert recipe["default_servings"] == 4
+    assert recipe["estimated_cooking_time_minutes"] is None
     assert recipe["ingredients"] == [
         {
             "display_name": "jasmine rice",
@@ -95,6 +90,15 @@ Fiber: 4g
         "fiber_g": 4,
         "notes": None,
     }
+
+
+def test_parse_recipe_extracts_minutes_and_servings_metadata() -> None:
+    recipe = parse_recipe(
+        "Quick pasta\n30 minutes | 2 servings\n\n"
+        "Ingredients\n- 1 cup pasta\n\nInstructions\n1. Cook the pasta."
+    )
+
+    assert recipe["estimated_cooking_time_minutes"] == 30
 
 
 def test_parse_recipe_joins_unmarked_lines_to_numbered_instructions() -> None:

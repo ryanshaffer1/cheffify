@@ -38,7 +38,7 @@ A recipe contains:
 - cookware/tools
 - instructions
 - manual nutrition facts
-- keywords / tags
+- tags
 - source type: built-in or custom
 - created date / modified date
 
@@ -132,7 +132,7 @@ Missing nutrition data should be handled gracefully:
 Users can search by:
 
 - recipe title
-- keywords/tags
+- tags
 - ingredient names
 - recipe text snippets (optional in MVP)
 
@@ -140,7 +140,7 @@ Search should support at least:
 
 - contains-based title matching
 - ingredient-aware filtering
-- keyword tags
+- tags
 
 ### 3.7 Custom recipe upload
 
@@ -445,7 +445,7 @@ Example:
 Search should operate against:
 
 - recipe title
-- keywords/tags
+- tags
 - ingredient names
 - normalized ingredient names
 
@@ -453,14 +453,14 @@ Search should operate against:
 
 - exact or fuzzy match on title
 - ingredient-based filter using normalized names
-- keyword lookup by tags or manual keywords
+- tag lookup
 - recipe listings can be sorted by relevance and newest
 
 ### Example queries
 
 - “chicken pasta”
 - ingredients containing “tomato” and “basil”
-- keywords: “quick”, “dinner”, “family"
+- tags: “quick”, “dinner”, “family"
 
 ### Data structure recommendation
 
@@ -661,7 +661,7 @@ The API and database schema should remain extensible.
 
 - recipe database with scaling
 - custom recipe upload with review
-- search by title, keyword, ingredient
+- search by title, tag, ingredient
 - meal plan builder
 - aggregated grocery list generation
 - manual grocery item support

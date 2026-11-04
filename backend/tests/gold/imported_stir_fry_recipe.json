@@ -1,6 +1,6 @@
 {
     "title": "Chicken, Bell Pepper & Cashew Stir-Fry over Rice",
-    "keywords": [],
+    "tags": [],
     "ingredients": [
         {
             "display_name": "basmati rice",
@@ -210,6 +210,7 @@
     "default_servings": 2,
     "min_servings": 1,
     "max_servings": 2,
+    "estimated_cooking_time_minutes": 30,
     "nutrition": {
         "calories": null,
         "protein_g": null,

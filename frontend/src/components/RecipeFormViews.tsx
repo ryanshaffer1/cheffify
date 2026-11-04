@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, FormEvent, SetStateAction } from 'react'
 import { IngredientStepPicker } from './IngredientStepPicker'
 import type { IngredientEditorRow, InstructionStep, Recipe, RecipeIngredient } from '../types/recipe'
@@ -117,11 +117,14 @@ type RecipeFormViewBaseProps = {
   cookwareRows: string[]
   setCookwareRows: Dispatch<SetStateAction<string[]>>
   imageUrl: string | null
+  standardizedTags: string[]
   uploadingImage: boolean
   expandedInstructionIndex: number | null
   saving: boolean
+  message: string | null
   setExpandedInstructionIndex: Dispatch<SetStateAction<number | null>>
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onTitleChange: () => void
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   updateIngredientRow: IngredientRowActions['updateIngredientRow']
   addIngredientRow: IngredientRowActions['addIngredientRow']
@@ -155,11 +158,30 @@ export type RecipeFormViewProps = RecipeFormViewBaseProps & (EditRecipeFormMode 
 
 export function RecipeFormView(props: RecipeFormViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleFieldRef = useRef<HTMLTextAreaElement>(null)
+  const tagFieldRef = useRef<HTMLDivElement>(null)
+  const tagInputRef = useRef<HTMLInputElement>(null)
+  const [showStandardizedTags, setShowStandardizedTags] = useState(false)
   const openFilePicker = () => fileInputRef.current?.click()
   const isNewRecipe = props.mode === 'upload'
   const recipe = isNewRecipe ? undefined : props.recipe
   const updateField = (field: keyof RecipeFormFields, value: string) =>
     props.setFields((current) => ({ ...current, [field]: value }))
+  const selectedTagNames = props.fields.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+  const selectedTagKeys = new Set(selectedTagNames.map((tag) => tag.toLocaleLowerCase()))
+  const toggleStandardizedTag = (tag: string, checked: boolean) => {
+    const tagKey = tag.toLocaleLowerCase()
+    const nextTags = selectedTagNames.filter((selected) => selected.toLocaleLowerCase() !== tagKey)
+    if (checked) nextTags.push(tag)
+    updateField('tags', nextTags.join(', '))
+  }
+
+  useEffect(() => {
+    if (props.message) {
+      titleFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [props.message])
+
   const importControls = props.mode === 'upload' ? (
     <>
       <input ref={fileInputRef} type="file" accept=".txt,.md,.json,.csv,.yaml,.yml,.html,.htm,.pdf,.doc,.docx,.rtf,.heic,.hevc,.heif,.png,.jpg,.jpeg,application/msword,application/pdf" multiple hidden onChange={props.onImportFileChange} />
@@ -199,18 +221,49 @@ export function RecipeFormView(props: RecipeFormViewProps) {
 
       <form id='edit-recipe-form' className="upload-form" onSubmit={props.onSubmit}>
         <label>Recipe title<textarea
+          ref={titleFieldRef}
             className="expanding-textarea"
             value={props.fields.title}
             placeholder="e.g. Coconut Chickpea Curry"
-            onChange={(event) => updateField('title', event.target.value)}
+            onChange={(event) => { updateField('title', event.target.value); props.onTitleChange() }}
         /></label>
+          {props.message ? <p className="recipe-form-message" role="alert">{props.message}</p> : null}
         <label>Description<textarea
             className="expanding-textarea"
             value={props.fields.description}
             onChange={(event) => updateField('description', event.target.value)}
         /></label>
         <label>Source<input name="source" type="text" value={props.fields.source} placeholder="e.g. Family cookbook or website URL" onChange={(event) => updateField('source', event.target.value)} /></label>
-        <label>Keywords<input name="keywords" type="text" value={props.fields.keywords} placeholder="quick, dinner, vegetarian" onChange={(event) => updateField('keywords', event.target.value)} /></label>
+        <div
+          className="recipe-tag-field"
+          ref={tagFieldRef}
+          onFocusCapture={() => setShowStandardizedTags(true)}
+          onBlurCapture={() => window.requestAnimationFrame(() => {
+            if (!tagFieldRef.current?.contains(document.activeElement)) {
+              setShowStandardizedTags(false)
+            }
+          })}
+        >
+          <label htmlFor="recipe-tags-input">Tags</label>
+          <input ref={tagInputRef} id="recipe-tags-input" name="tags" type="text" value={props.fields.tags} placeholder="quick, dinner, vegetarian" onChange={(event) => updateField('tags', event.target.value)} />
+          {showStandardizedTags ? (
+            <div className="standardized-tag-options">
+              {props.standardizedTags.length ? props.standardizedTags.map((tag) => (
+                <label key={tag} className="standardized-tag-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedTagKeys.has(tag.toLocaleLowerCase())}
+                    onChange={(event) => {
+                      toggleStandardizedTag(tag, event.target.checked)
+                      window.requestAnimationFrame(() => tagInputRef.current?.focus({ preventScroll: true }))
+                    }}
+                  />
+                  <span>{tag}</span>
+                </label>
+              )) : <span className="muted">No saved tags yet.</span>}
+            </div>
+          ) : null}
+        </div>
         <div className="subsection-block">
           <h3>Image</h3>
           <label className="image-upload-field">
@@ -228,6 +281,7 @@ export function RecipeFormView(props: RecipeFormViewProps) {
             <label>Max<input name="maxServings" type="number" min="1" value={props.fields.maxServings} onChange={(event) => updateField('maxServings', event.target.value)} /></label>
           </div>
         </div>
+        <label>Estimated cooking time (minutes)<input name="estimatedCookingTimeMinutes" type="number" min="1" step="1" value={props.fields.estimatedCookingTimeMinutes} placeholder="e.g. 30" onChange={(event) => updateField('estimatedCookingTimeMinutes', event.target.value)} /></label>
         <IngredientRowsEditor rows={props.ingredientRows} updateIngredientRow={props.updateIngredientRow} addIngredientRow={props.addIngredientRow} removeIngredientRow={props.removeIngredientRow} label={isNewRecipe ? 'Ingredients' : 'Ingredients (based on default servings)'} />
         <CookwareRowsEditor rows={props.cookwareRows} setRows={props.setCookwareRows} addCookwareRow={props.addCookwareRow} removeCookwareRow={props.removeCookwareRow} />
         <InstructionRowsEditor rows={props.instructionRows} setRows={props.setInstructionRows} ingredients={props.ingredientRows} expandedIndex={props.expandedInstructionIndex} setExpandedIndex={props.setExpandedInstructionIndex} toggleIngredient={props.toggleIngredient} moveStep={props.moveStep} addStep={props.addStep} removeStep={props.removeStep} />

@@ -14,7 +14,7 @@ from app.models import (
     Recipe,
     RecipeIngredient,
     RecipeInstruction,
-    RecipeKeyword,
+    RecipeTag,
     RecipeNutrition,
     RecipeTool,
 )
@@ -67,10 +67,11 @@ def _recipe_to_read(recipe: Recipe) -> RecipeRead:
         default_servings=recipe.default_servings,
         servings_min=recipe.servings_min,
         servings_max=recipe.servings_max,
+        estimated_cooking_time_minutes=recipe.estimated_cooking_time_minutes,
         image_url=recipe.image_url,
         source=recipe.source,
         source_type=recipe.source_type,
-        keywords=[keyword.keyword for keyword in recipe.keywords],
+        tags=[tag.tag for tag in recipe.tags],
         tools=[tool.name for tool in recipe.tools],
         ingredients=ingredients,
         instructions=instructions,
@@ -97,6 +98,23 @@ def _recipe_to_read(recipe: Recipe) -> RecipeRead:
             else None
         ),
     )
+
+
+def _ensure_unique_recipe_title(
+    db: Session, title: str, excluded_recipe_id: int | None = None
+) -> None:
+    normalized_title = " ".join(title.split()).casefold()
+    existing_recipes = db.query(Recipe.id, Recipe.title).all()
+    has_conflict = any(
+        recipe_id != excluded_recipe_id
+        and " ".join(existing_title.split()).casefold() == normalized_title
+        for recipe_id, existing_title in existing_recipes
+    )
+    if has_conflict:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A recipe with this name already exists. Please choose another name.",
+        )
 
 
 @router.post("/upload-image")
@@ -169,12 +187,14 @@ def get_recipe(recipe_id: int, db: Session = Depends(get_db)) -> RecipeRead:
 
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
 def create_recipe(payload: RecipeCreate, db: Session = Depends(get_db)) -> RecipeRead:
+    _ensure_unique_recipe_title(db, payload.title)
     recipe = Recipe(
         title=payload.title,
         description=payload.description,
         default_servings=payload.default_servings,
         servings_min=payload.servings_min,
         servings_max=payload.servings_max,
+        estimated_cooking_time_minutes=payload.estimated_cooking_time_minutes,
         image_url=payload.image_url,
         source=payload.source,
         source_type=payload.source_type,
@@ -183,8 +203,8 @@ def create_recipe(payload: RecipeCreate, db: Session = Depends(get_db)) -> Recip
     db.add(recipe)
     db.flush()
 
-    for keyword in payload.keywords:
-        db.add(RecipeKeyword(recipe_id=recipe.id, keyword=keyword))
+    for tag in payload.tags:
+        db.add(RecipeTag(recipe_id=recipe.id, tag=tag))
 
     for tool_name in payload.tools:
         db.add(RecipeTool(recipe_id=recipe.id, name=tool_name))
@@ -250,25 +270,28 @@ def update_recipe(
             status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found"
         )
 
+    _ensure_unique_recipe_title(db, payload.title, excluded_recipe_id=recipe.id)
+
     recipe.title = payload.title
     recipe.description = payload.description
     recipe.default_servings = payload.default_servings
     recipe.servings_min = payload.servings_min
     recipe.servings_max = payload.servings_max
+    recipe.estimated_cooking_time_minutes = payload.estimated_cooking_time_minutes
     recipe.image_url = payload.image_url
     recipe.source = payload.source
     recipe.source_type = payload.source_type
 
-    for existing_keyword in list(recipe.keywords):
-        db.delete(existing_keyword)
+    for existing_tag in list(recipe.tags):
+        db.delete(existing_tag)
     for existing_tool in list(recipe.tools):
         db.delete(existing_tool)
     if recipe.nutrition:
         db.delete(recipe.nutrition)
     db.flush()
 
-    for keyword in payload.keywords:
-        recipe.keywords.append(RecipeKeyword(keyword=keyword))
+    for tag in payload.tags:
+        recipe.tags.append(RecipeTag(tag=tag))
 
     for tool_name in payload.tools:
         recipe.tools.append(RecipeTool(name=tool_name))
@@ -352,16 +375,14 @@ def update_recipe(
         for ingredient in persisted_ingredients
     }
     for index, instruction in enumerate(payload.instructions):
-        persisted_instruction = (
-            existing_instructions[index]
-            if index < len(existing_instructions)
-            else RecipeInstruction(
+        if index < len(existing_instructions):
+            persisted_instruction = existing_instructions[index]
+        else:
+            persisted_instruction = RecipeInstruction(
                 recipe_id=recipe.id,
                 step_number=instruction.step_number,
                 instruction=instruction.instruction,
             )
-        )
-        if persisted_instruction.recipe_id is None:
             recipe.instructions.append(persisted_instruction)
         persisted_instruction.instruction = instruction.instruction
         persisted_instruction.step_number = instruction.step_number

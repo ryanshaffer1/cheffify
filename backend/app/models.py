@@ -36,6 +36,7 @@ class Recipe(Base):
     default_servings = Column(Integer, nullable=False)
     servings_min = Column(Integer, nullable=True)
     servings_max = Column(Integer, nullable=True)
+    estimated_cooking_time_minutes = Column(Integer, nullable=True)
     image_url = Column(Text, nullable=True)
     source = Column(Text, nullable=True)
     source_type = Column(String(32), nullable=False, default="custom")
@@ -57,19 +58,19 @@ class Recipe(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    keywords = relationship(
-        "RecipeKeyword", back_populates="recipe", cascade="all, delete-orphan"
+    tags = relationship(
+        "RecipeTag", back_populates="recipe", cascade="all, delete-orphan"
     )
 
 
-class RecipeKeyword(Base):
+class RecipeTag(Base):
     __tablename__ = "recipe_keywords"
 
     id = Column(Integer, primary_key=True, index=True)
     recipe_id = Column(Integer, ForeignKey("recipes.id"), nullable=False)
-    keyword = Column(String(100), nullable=False)
+    tag = Column("keyword", String(100), nullable=False)
 
-    recipe = relationship("Recipe", back_populates="keywords")
+    recipe = relationship("Recipe", back_populates="tags")
 
     __table_args__ = (UniqueConstraint("recipe_id", "keyword"),)
 

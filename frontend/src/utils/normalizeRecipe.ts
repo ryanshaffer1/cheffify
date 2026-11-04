@@ -1,5 +1,28 @@
 import type { Recipe } from '../types/recipe'
 
+const normalizeTags = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+
+  const tags = new Map<string, string>()
+  value.forEach((item) => {
+    if (typeof item !== 'string') return
+    const tag = item.trim().replace(/\s+/g, ' ')
+    if (!tag) return
+    const titleCaseTag = tag.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+    const key = titleCaseTag.toLocaleLowerCase()
+    if (!tags.has(key)) tags.set(key, titleCaseTag)
+  })
+  return [...tags.values()]
+}
+
+export const normalizeStoredRecipe = (recipe: Recipe): Recipe => {
+  const legacyTags = (recipe as Recipe & { keywords?: unknown }).keywords
+  return {
+    ...recipe,
+    tags: normalizeTags(Array.isArray(recipe.tags) ? recipe.tags : legacyTags),
+  }
+}
+
 export const normalizeRecipe = (item: any): Recipe => {
   const defaultServings = Number(item.default_servings ?? item.servings ?? 2) || 2
   const servingsMin = item.servings_min == null ? null : Number(item.servings_min) || 1
@@ -8,14 +31,17 @@ export const normalizeRecipe = (item: any): Recipe => {
   return {
     id: Number(item.id),
     title: item.title || 'Untitled recipe',
-    description: item.description || 'Custom recipe',
+    description: typeof item.description === 'string' ? item.description : '',
     servings: defaultServings,
     defaultServings,
     servingsMin,
     servingsMax,
+    estimatedCookingTimeMinutes: item.estimated_cooking_time_minutes == null
+      ? null
+      : Number(item.estimated_cooking_time_minutes),
     imageUrl: item.image_url ?? item.imageUrl ?? null,
     source: typeof item.source === 'string' ? item.source : null,
-    keywords: Array.isArray(item.keywords) ? item.keywords : [],
+    tags: normalizeTags(Array.isArray(item.tags) ? item.tags : item.keywords),
     ingredients: Array.isArray(item.ingredients)
       ? item.ingredients.map((ingredient: any) => ({
           id: Number.isInteger(ingredient.id) ? Number(ingredient.id) : undefined,

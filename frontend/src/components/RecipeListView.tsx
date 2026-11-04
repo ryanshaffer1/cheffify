@@ -5,6 +5,7 @@ type RecipeListViewProps = {
   loading: boolean
   query: string
   filter: string
+  quickFilters: string[]
   onQueryChange: (query: string) => void
   onFilterChange: (filter: string) => void
   onUpload: () => void
@@ -16,13 +17,12 @@ type RecipeListViewProps = {
   formatIngredient: (ingredient: Recipe['ingredients'][number]) => string
 }
 
-const filters = ['all', 'quick', 'dinner', 'vegetarian']
-
 export function RecipeListView({
   recipes,
   loading,
   query,
   filter,
+  quickFilters,
   onQueryChange,
   onFilterChange,
   onUpload,
@@ -38,7 +38,7 @@ export function RecipeListView({
       <section className="panel search-panel">
         <input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search recipes or ingredients" />
         <div className="chip-row">
-          {filters.map((item) => (
+          {['all', ...quickFilters].map((item) => (
             <button key={item} type="button" className={filter === item ? 'chip active' : 'chip'} onClick={() => onFilterChange(item)}>
               {item === 'all' ? 'All' : item}
             </button>
@@ -74,8 +74,9 @@ export function RecipeListView({
               />
               <div className="recipe-copy">
                 <h3>{recipe.title}</h3>
-                <p>{recipe.description}</p>
+                {recipe.description.trim() ? <p>{recipe.description}</p> : null}
                 <p>{getServingRangeText(recipe)}</p>
+                {recipe.estimatedCookingTimeMinutes != null ? <p>{recipe.estimatedCookingTimeMinutes} min</p> : null}
                 <p className="muted">{recipe.ingredients.slice(0, 3).map(formatIngredient).join(' • ')}</p>
                 {isRecipeInMealPlan(recipe.id) ? (
                   <div className="meal-plan-status-badge">Added to Meal Plan</div>

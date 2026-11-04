@@ -61,13 +61,14 @@ export function RecipeDetailPanel({
         />
         <div>
           <h2>{recipe.title}</h2>
-          <p>{recipe.description}</p>
+          {recipe.description.trim() ? <p>{recipe.description}</p> : null}
         </div>
       </div>
 
       <div className="meta-row">
         <span>{getServingRangeText(recipe)}</span>
-        <span>{recipe.keywords.join(', ') || 'custom'}</span>
+        <span>{recipe.tags.join(', ') || 'custom'}</span>
+        {recipe.estimatedCookingTimeMinutes != null ? <span>{recipe.estimatedCookingTimeMinutes} min</span> : null}
       </div>
       {recipe.source ? <p className="recipe-source">Source: <SmartText text={recipe.source} /> </p> : null}
 

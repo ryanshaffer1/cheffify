@@ -13,10 +13,11 @@ const fieldsForRecipe = (recipe: Recipe | null): RecipeFormFields => recipe ? ({
   title: recipe.title,
   description: recipe.description,
   source: recipe.source ?? '',
-  keywords: recipe.keywords.join(', '),
+  tags: recipe.tags.join(', '),
   defaultServings: String(recipe.defaultServings ?? recipe.servings ?? 2),
   minServings: String(recipe.servingsMin ?? 1),
   maxServings: String(recipe.servingsMax ?? recipe.defaultServings ?? recipe.servings ?? 4),
+  estimatedCookingTimeMinutes: recipe.estimatedCookingTimeMinutes == null ? '' : String(recipe.estimatedCookingTimeMinutes),
   calories: recipe.nutrition?.calories == null ? '' : String(recipe.nutrition.calories),
   protein: recipe.nutrition?.protein_g == null ? '' : String(recipe.nutrition.protein_g),
   carbs: recipe.nutrition?.carbs_g == null ? '' : String(recipe.nutrition.carbs_g),
@@ -110,12 +111,15 @@ export function useRecipeEditor(selectedRecipe: Recipe | null) {
   const applyImportedRecipe = (imported: ImportedRecipe) => {
     setUploadFields({
       title: imported.title,
-      description: 'Custom recipe',
+      description: '',
       source: '',
-      keywords: imported.keywords.join(', '),
+      tags: imported.tags.join(', '),
       defaultServings: String(imported.default_servings || 2),
       minServings: String(imported.min_servings || 1),
       maxServings: String(imported.max_servings || imported.default_servings || 2),
+      estimatedCookingTimeMinutes: imported.estimated_cooking_time_minutes == null
+        ? ''
+        : String(imported.estimated_cooking_time_minutes),
       calories: imported.nutrition.calories == null ? '' : String(imported.nutrition.calories),
       protein: imported.nutrition.protein_g == null ? '' : String(imported.nutrition.protein_g),
       carbs: imported.nutrition.carbs_g == null ? '' : String(imported.nutrition.carbs_g),

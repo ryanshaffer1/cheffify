@@ -34,13 +34,14 @@ export type InstructionStep = {
 
 export type ImportedRecipe = {
   title: string
-  keywords: string[]
+  tags: string[]
   ingredients: Omit<RecipeIngredient, 'is_optional' | 'notes'>[]
   instructions: RecipeInstruction[]
   tools: string[]
   default_servings: number
   min_servings: number
   max_servings: number
+  estimated_cooking_time_minutes?: number | null
   nutrition: RecipeNutrition
 }
 
@@ -52,9 +53,10 @@ export type Recipe = {
   defaultServings: number
   servingsMin: number | null
   servingsMax: number | null
+  estimatedCookingTimeMinutes?: number | null
   imageUrl?: string | null
   source?: string | null
-  keywords: string[]
+  tags: string[]
   ingredients: RecipeIngredient[]
   instructions: RecipeInstruction[]
   tools: string[]

@@ -6,6 +6,7 @@ from app.models import RecipeInstructionIngredient
 
 INSTRUCTION_INGREDIENTS_TABLE = "recipe_instruction_ingredients"
 RECIPE_SOURCE_COLUMN = "source"
+RECIPE_ESTIMATED_COOKING_TIME_COLUMN = "estimated_cooking_time_minutes"
 
 
 def ensure_instruction_ingredient_links(connection: Connection) -> None:
@@ -31,3 +32,16 @@ def ensure_recipe_source_column(connection: Connection) -> None:
     columns = inspect(connection).get_columns("recipes")
     if not any(column["name"] == RECIPE_SOURCE_COLUMN for column in columns):
         connection.execute(text("ALTER TABLE recipes ADD COLUMN source TEXT"))
+
+
+def ensure_recipe_estimated_cooking_time_column(connection: Connection) -> None:
+    """Add the optional estimated cooking time to existing recipe tables."""
+    columns = inspect(connection).get_columns("recipes")
+    if not any(
+        column["name"] == RECIPE_ESTIMATED_COOKING_TIME_COLUMN for column in columns
+    ):
+        connection.execute(
+            text(
+                "ALTER TABLE recipes ADD COLUMN estimated_cooking_time_minutes INTEGER"
+            )
+        )

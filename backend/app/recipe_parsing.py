@@ -7,6 +7,8 @@ from PIL import Image
 import pytesseract
 from pypdf import PdfReader
 
+from app.tag_utils import normalize_tags
+
 
 def normalize_ocr_text(raw_text: str) -> str:
     text = raw_text.replace("\r", "")
@@ -560,23 +562,33 @@ def parse_recipe(extracted_text: str) -> dict[str, object]:
         r"^(?:title|recipe)\s*[:\-]\s*", "", title, flags=re.IGNORECASE
     ).strip("# ")
 
-    keyword_match = re.search(
+    tag_match = re.search(
         r"(?:tags?|keywords?)\s*[:\-]\s*([^\n]+)", normalized, re.IGNORECASE
     )
-    keywords = (
+    tags = (
         [
             item.strip(" #-")
-            for item in re.split(r"[,]+", keyword_match.group(1))
+            for item in re.split(r"[,]+", tag_match.group(1))
             if item.strip()
         ]
-        if keyword_match
+        if tag_match
         else [match.group(1) for match in re.finditer(r"#([A-Za-z0-9_-]+)", normalized)]
     )
+    tags = normalize_tags(tags)
 
     servings_match = re.search(
         r"(?:serves?|yield|makes?)\s*[:\-]\s*(\d+)", normalized, re.IGNORECASE
     )
     default_servings = int(servings_match.group(1)) if servings_match else 2
+    cooking_time_match = re.search(
+        r"(?im)^\s*(?:(\d+)\s*(?:minutes?|mins?)\s*\|\s*\d+\s+servings?|(?:estimated\s+)?(?:cooking|cook|total)\s*time\s*[:\-]\s*(\d+)\s*(?:minutes?|mins?))\s*$",
+        normalized,
+    )
+    estimated_cooking_time_minutes = (
+        int(cooking_time_match.group(1) or cooking_time_match.group(2))
+        if cooking_time_match
+        else None
+    )
 
     sections = _extract_sections(lines)
     ingredients = [
@@ -613,13 +625,14 @@ def parse_recipe(extracted_text: str) -> dict[str, object]:
 
     return {
         "title": title,
-        "keywords": keywords,
+        "tags": tags,
         "ingredients": ingredients,
         "instructions": instructions,
         "tools": tools,
         "default_servings": default_servings,
         "min_servings": 1,
         "max_servings": default_servings,
+        "estimated_cooking_time_minutes": estimated_cooking_time_minutes,
         "nutrition": _parse_nutrition(normalized),
     }
 
