@@ -1,5 +1,9 @@
 import React from 'react';
 
+export const toTitleCase = (value: string): string =>
+  value.trim().replace(/\s+/g, ' ').toLowerCase().split(' ')
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : '')).join(' ')
+
 export const normalizeDisplayName = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').toLowerCase()
 

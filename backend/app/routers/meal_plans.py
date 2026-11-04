@@ -7,6 +7,7 @@ from app.database import SessionLocal
 from app.models import (
     GroceryList,
     GroceryListItem,
+    GroceryItemMetadata,
     MealPlan,
     MealPlanRecipe,
     Recipe,
@@ -135,6 +136,16 @@ def get_meal_plan_grocery(
     return generate_grocery_items(plan.id, db)
 
 
+def get_aisle_for_ingredient(ingredient_name: str, db: Session) -> str | None:
+    metadata = (
+        db.query(GroceryItemMetadata)
+        .filter(GroceryItemMetadata.normalized_name == ingredient_name)
+        .first()
+    )
+    if metadata is not None:
+        return metadata.typical_aisle
+    return None
+
 def generate_grocery_items(meal_plan_id: int, db: Session) -> list[dict[str, object]]:
     links = (
         db.query(MealPlanRecipe)
@@ -173,6 +184,7 @@ def generate_grocery_items(meal_plan_id: int, db: Session) -> list[dict[str, obj
             "normalized_name": data["normalized_name"],
             "quantity": round(float(data["quantity"]), 2),
             "unit": data["unit"],
+            "aisle": get_aisle_for_ingredient(data["normalized_name"], db),
             "source_recipe_names": sorted(data["source_recipe_names"]),
         }
         for data in grouped.values()

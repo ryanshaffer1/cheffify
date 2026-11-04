@@ -15,6 +15,7 @@ export const mergeGroceryEntries = (items: GroceryItem[]): GroceryItem[] => {
     const key = getGroceryKey(item)
     const current = merged.get(key)
     const quantity = Number(item.quantity ?? 0) || 0
+    const aisle = item.aisle || ''
     const unit = normalizeIngredientUnit(item.unit || '') || undefined
     const source = item.source ? [...new Set(item.source)] : undefined
 
@@ -23,6 +24,7 @@ export const mergeGroceryEntries = (items: GroceryItem[]): GroceryItem[] => {
       merged.set(key, {
         ...current,
         checked: current.checked || item.checked,
+        aisle: aisle,
         quantity: (Number(current.quantity ?? 0) || 0) + quantity,
         unit: current.unit || unit,
         source: combinedSources.length ? combinedSources : current.source,
@@ -33,6 +35,7 @@ export const mergeGroceryEntries = (items: GroceryItem[]): GroceryItem[] => {
     merged.set(key, {
       ...item,
       checked: Boolean(item.checked),
+      aisle: aisle,
       quantity: quantity || 1,
       unit,
       source,

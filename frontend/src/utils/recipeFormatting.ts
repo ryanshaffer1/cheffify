@@ -1,5 +1,5 @@
 import type { GroceryItem, Recipe, RecipeIngredient } from '../types/recipe'
-import { normalizeDisplayName } from './text'
+import { normalizeDisplayName, toTitleCase } from './text'
 
 const BACKEND_BASE_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
@@ -41,10 +41,6 @@ export const resolveImageUrl = (imageUrl?: string | null): string | null => {
   if (imageUrl.startsWith('/')) return `${BACKEND_BASE_URL}${imageUrl}`
   return `${BACKEND_BASE_URL}/${imageUrl}`
 }
-
-const toTitleCase = (value: string): string =>
-  value.trim().replace(/\s+/g, ' ').toLowerCase().split(' ')
-    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : '')).join(' ')
 
 const formatQuantityForDisplay = (quantity: number): string => {
   const numeric = Number(quantity)
@@ -105,7 +101,7 @@ export const formatNutritionValue = (value: number | null | undefined, servings:
 }
 
 export const formatGroceryItemText = (
-  item: GroceryItem | { name: string; checked: boolean; source?: string[]; quantity?: number; unit?: string | null },
+  item: GroceryItem | { name: string; checked: boolean; aisle?: string; source?: string[]; quantity?: number; unit?: string | null },
 ) => {
   const name = toTitleCase(item.name)
   const quantity = Number(item.quantity ?? 0)

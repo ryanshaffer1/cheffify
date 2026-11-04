@@ -64,6 +64,7 @@ export type Recipe = {
 export type GroceryItem = {
   name: string
   checked: boolean
+  aisle?: string
   source?: string[]
   quantity?: number
   unit?: string

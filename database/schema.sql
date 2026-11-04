@@ -120,12 +120,19 @@ CREATE TABLE grocery_item_sources (
     UNIQUE (grocery_list_item_id, recipe_id)
 );
 
+CREATE TABLE grocery_item_metadata (
+    id SERIAL PRIMARY KEY,
+    normalized_name VARCHAR(255) NOT NULL UNIQUE,
+    typical_aisle VARCHAR(255)
+);
+
 CREATE INDEX idx_recipes_title ON recipes (title);
 CREATE INDEX idx_recipe_ingredients_normalized ON recipe_ingredients (normalized_name);
 CREATE INDEX idx_recipe_keywords_keyword ON recipe_keywords (keyword);
 CREATE INDEX idx_meal_plan_recipes_recipe_id ON meal_plan_recipes (recipe_id);
 CREATE INDEX idx_grocery_list_items_normalized ON grocery_list_items (normalized_name);
 CREATE INDEX idx_grocery_item_sources_recipe_id ON grocery_item_sources (recipe_id);
+CREATE INDEX idx_grocery_item_metadata_normalized ON grocery_item_metadata (normalized_name);
 
 -- Optional convenience trigger for updated_at if you want to add later.
 -- This file intentionally keeps the schema straightforward for first implementation.

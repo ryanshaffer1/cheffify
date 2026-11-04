@@ -225,6 +225,14 @@ class GroceryListItem(Base):
     )
 
 
+class GroceryItemMetadata(Base):
+    __tablename__ = "grocery_item_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    normalized_name = Column(String(255), nullable=False)
+    typical_aisle = Column(String(255), nullable=True)
+
+
 class GroceryItemSource(Base):
     __tablename__ = "grocery_item_sources"
 

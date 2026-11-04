@@ -107,6 +107,7 @@ export function useGroceries(mealPlan: Recipe[]) {
       const items = Array.isArray(data.grocery_items) ? data.grocery_items.map((item: any) => ({
         name: item.display_name || item.normalized_name || 'Ingredient',
         checked: false,
+        aisle: item.aisle || '',
         source: item.source_recipe_names || [],
         quantity: Number(item.quantity ?? 1),
         unit: item.unit || 'item',
