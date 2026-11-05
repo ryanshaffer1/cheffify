@@ -84,17 +84,33 @@
   box-sizing: border-box;
 }
 
-.chip-row {
+.tag-list-scroll-master-wrapper {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
   margin-top: 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tag-list-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: max-content;
 }
 
 .chip {
+  flex: 0 0 auto;
+  width: max-content;
+  white-space: nowrap;
   border: none;
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 6px 12px;
   background: #f0e7e0;
   color: #3a2d29;
   font-weight: 700;

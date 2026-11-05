@@ -1,4 +1,5 @@
 import type { GroceryItem, Recipe, RecipeIngredient } from '../types/recipe'
+import { approximateFraction, stringToNumber } from './math';
 import { normalizeDisplayName, toTitleCase } from './text'
 
 const BACKEND_BASE_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/+$/, '')
@@ -51,14 +52,14 @@ const UNIT_FORMS: Record<string, UnitForms> = {
 
 export const makeIngredient = (
   display_name: string,
-  quantity: number,
+  quantity: string | number,
   unit: string,
   notes: string | null = null,
   is_optional = false,
 ): RecipeIngredient => ({
   display_name,
   normalized_name: display_name.toLowerCase(),
-  quantity,
+  quantity: parseFormattedQuantity(quantity),
   unit: unit && unit.toLowerCase() !== 'item' ? unit : '',
   notes,
   is_optional,
@@ -70,16 +71,21 @@ export const normalizeIngredientUnit = (unit: string): string => {
   return UNIT_FORMS[normalized]?.normalized ?? normalized
 }
 
-export const resolveImageUrl = (imageUrl?: string | null): string | null => {
-  if (!imageUrl) return null
-  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
-  if (imageUrl.startsWith('/')) return `${BACKEND_BASE_URL}${imageUrl}`
-  return `${BACKEND_BASE_URL}/${imageUrl}`
+export const parseFormattedQuantity = (value: string | number): number => {
+  try {
+    return (typeof value === 'number') ? value : stringToNumber(String(value))
+  } catch {
+    return 0
+  }
 }
 
-const formatQuantityForDisplay = (quantity: number): string => {
-  const numeric = Number(quantity)
-  return Number.isInteger(numeric) ? String(numeric) : numeric.toString()
+export const formatQuantityForDisplay = (quantity: number | string): string => {
+  const numericQuantity = parseFormattedQuantity(quantity)
+  if (Number.isInteger(numericQuantity)) return String(numericQuantity)
+  if (numericQuantity < 1) return approximateFraction(numericQuantity)
+  // if (numericQuantity % 0.5 === 0) return numericQuantity.toFixed(1)
+  // if (numericQuantity % 0.25 === 0) return numericQuantity.toFixed(2)
+  return `${Math.floor(numericQuantity)} ${approximateFraction(numericQuantity % 1)}`
 }
 
 const formatUnitForDisplay = (unit: string, quantity: number): string => {
@@ -114,6 +120,13 @@ export const getRecipeServingRangeText = (
   return minServings > 1 || maxServings > defaultServings
     ? `Serves ${minServings}-${maxServings}`
     : `Serves ${defaultServings}`
+}
+
+export const resolveImageUrl = (imageUrl?: string | null): string | null => {
+  if (!imageUrl) return null
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl
+  if (imageUrl.startsWith('/')) return `${BACKEND_BASE_URL}${imageUrl}`
+  return `${BACKEND_BASE_URL}/${imageUrl}`
 }
 
 export const formatNutritionValue = (value: number | null | undefined, servings: number): string => {

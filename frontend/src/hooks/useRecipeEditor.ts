@@ -130,7 +130,7 @@ export function useRecipeEditor(selectedRecipe: Recipe | null) {
     setUploadIngredientRows(imported.ingredients.length ? imported.ingredients.map((ingredient) => ({
       name: ingredient.display_name,
       quantity: String(ingredient.quantity || 1),
-      unit: ingredient.unit || '',
+      unit: ingredient.unit && ingredient.unit.toLowerCase() !== 'item' ? ingredient.unit : '',
     })) : [createIngredientRow()])
     setUploadInstructionRows(imported.instructions.length ? imported.instructions.map((instruction) => ({
       instruction: instruction.instruction,

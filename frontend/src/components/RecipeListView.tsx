@@ -33,15 +33,29 @@ export function RecipeListView({
   getServingRangeText,
   formatIngredient,
 }: RecipeListViewProps) {
+  const tags: string[] = ['all', ...quickFilters];
+  let rowsCount = 3; // You can adjust this number to control how many rows of badges you want
+  // Create an array of empty arrays representing our N rows
+  const rows: string[][] = Array.from({ length: rowsCount }, () => []);
+  // Distribute tags into rows sequentially using modulo (%)
+  tags.forEach((tag, index) => {
+    const rowIndex = index % rowsCount;
+    rows[rowIndex].push(tag);
+  });
+
   return (
     <main className="page">
       <section className="panel search-panel">
         <input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search recipes or ingredients" />
-        <div className="chip-row">
-          {['all', ...quickFilters].map((item) => (
-            <button key={item} type="button" className={filter === item ? 'chip active' : 'chip'} onClick={() => onFilterChange(item)}>
-              {item === 'all' ? 'All' : item}
-            </button>
+        <div className="tag-list-scroll-master-wrapper">
+          {rows.map((rowItems, rowIndex) => (
+            <div key={rowIndex} className="tag-list-row">
+              {rowItems.map((tag, _) => (
+              <button key={tag} type="button" className={filter === tag ? 'chip active' : 'chip'} onClick={() => onFilterChange(tag)}>
+                {tag === 'all' ? 'All' : tag}
+              </button>
+              ))}
+            </div>
           ))}
         </div>
       </section>
@@ -77,7 +91,7 @@ export function RecipeListView({
                 {recipe.description.trim() ? <p>{recipe.description}</p> : null}
                 <p>{getServingRangeText(recipe)}</p>
                 {recipe.estimatedCookingTimeMinutes != null ? <p>{recipe.estimatedCookingTimeMinutes} min</p> : null}
-                <p className="muted">{recipe.ingredients.slice(0, 3).map(formatIngredient).join(' • ')}</p>
+                <p className="muted">{recipe.tags.join(' • ')}</p>
                 {isRecipeInMealPlan(recipe.id) ? (
                   <div className="meal-plan-status-badge">Added to Meal Plan</div>
                 ) : (

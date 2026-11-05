@@ -29,7 +29,7 @@ const STORAGE_KEYS = {
   recipes: 'cheffify.recipes',
   activeTab: 'cheffify.activeTab',
 } as const
-const MAX_QUICK_FILTER_TAGS = 5
+const MAX_QUICK_FILTER_TAGS = 100
 const RECIPE_NAME_CONFLICT_MESSAGE = 'A recipe with this name already exists. Please choose another name.'
 
 const normalizeRecipeTitle = (title: string): string =>
@@ -333,10 +333,9 @@ function App() {
     const parsedIngredients = editor.uploadIngredientRows
       .filter((row) => row.name.trim())
       .map((row) => {
-        const quantity = Number(row.quantity)
-        const normalizedQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+        const quantity = row.quantity
         const normalizedUnit = normalizeIngredientUnit(row.unit)
-        return makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit)
+        return makeIngredient(row.name.trim(), quantity, normalizedUnit)
       })
     const parsedInstructions = editor.uploadInstructionRows
       .map((step) => ({
@@ -448,11 +447,10 @@ function App() {
     const ingredients = editor.editIngredientRows
       .filter((row) => row.name.trim())
       .map((row) => {
-        const quantity = Number(row.quantity)
-        const normalizedQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+        const quantity = row.quantity
         const normalizedUnit = normalizeIngredientUnit(row.unit)
         return {
-          ...makeIngredient(row.name.trim(), normalizedQuantity, normalizedUnit),
+          ...makeIngredient(row.name.trim(), quantity, normalizedUnit),
           id: row.id,
         }
       })

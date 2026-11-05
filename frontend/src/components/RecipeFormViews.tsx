@@ -3,7 +3,7 @@ import type { Dispatch, FormEvent, SetStateAction } from 'react'
 import { IngredientStepPicker } from './IngredientStepPicker'
 import type { IngredientEditorRow, InstructionStep, Recipe, RecipeIngredient } from '../types/recipe'
 import type { RecipeFormFields } from '../types/recipeForm'
-import { resolveImageUrl } from '../utils/recipeFormatting'
+import { resolveImageUrl, formatQuantityForDisplay } from '../utils/recipeFormatting'
 import { normalizeDisplayName } from '../utils/text'
 
 type RowState<T> = {
@@ -24,7 +24,7 @@ function IngredientRowsEditor({ rows, updateIngredientRow, addIngredientRow, rem
       {rows.map((row, index) => (
         <div key={`ingredient-${index}`} className="ingredient-row">
           <input type="text" className="ingredient-field ingredient-field--name" value={row.name} placeholder="Ingredient name" onChange={(event) => updateIngredientRow(index, 'name', event.target.value)} />
-          <input type="number" className="ingredient-field ingredient-field--qty" min="0" step="0.25" value={row.quantity} onChange={(event) => updateIngredientRow(index, 'quantity', event.target.value)} />
+          <input type="text" className="ingredient-field ingredient-field--qty" defaultValue={formatQuantityForDisplay(row.quantity)} onBlur={(event) => updateIngredientRow(index, 'quantity', event.target.value)} />
           <input type="text" className="ingredient-field ingredient-field--unit" value={row.unit} placeholder="unit" onChange={(event) => updateIngredientRow(index, 'unit', event.target.value)} />
           {rows.length > 1 ? <button type="button" className="icon-button" aria-label="Remove ingredient" onClick={() => removeIngredientRow(index)}>X</button> : null}
         </div>
